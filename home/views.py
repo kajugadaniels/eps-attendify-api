@@ -472,3 +472,16 @@ class FieldRetrieveUpdateDestroyView(APIView):
             serializer.save()
             return Response({"message": "Field updated successfully", "user": serializer.data}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, field_id):
+        field = self.get_object(field_id)
+        if field is None:
+            return Response({"error": "Field not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Permission check: Only superusers or users with specific permission can delete
+        if not request.user.is_superuser:
+            return Response({"error": "You do not have permission to delete this field."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Deleting the user
+        field.delete()
+        return Response({"message": "Field deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
