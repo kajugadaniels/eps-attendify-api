@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 
@@ -78,3 +79,37 @@ class EmployeeAssignment(models.Model):
             ).exclude(id=self.id)
             if active_assignments.exists():
                 raise ValidationError(_("Employee is already assigned to another active group"))
+
+class Attendance(models.Model):
+    employee_assignment = models.ForeignKey(
+        'EmployeeAssignment', 
+        on_delete=models.CASCADE,
+        related_name='attendances'
+    )
+    date = models.DateField(default=timezone.now)
+    attended = models.BooleanField(default=False)
+    day_salary = models.CharField(max_length=255, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ['employee_assignment', 'date']
+        ordering = ['-date']
+
+    def __str__(self):
+        return f"{self.employee_assignment.employee.name} - {self.date}"
+
+    def save(self, *args, **kwargs):
+        # Get day salary from department if not set
+        if not self.day_salary:
+            self.day_salary = self.employee_assignment.assignment_group.department.day_salary
+        super().save(*args, **kwargs)
+
+    def clean(self):
+        # Ensure attendance is only marked for active assignments
+        if self.employee_assignment.status != 'active':
+            raise ValidationError(_("Cannot mark attendance for inactive assignment"))
+        
+        # Ensure attendance is not marked for future dates
+        if self.date > timezone.now().date():
+            raise ValidationError(_("Cannot mark attendance for future dates"))
