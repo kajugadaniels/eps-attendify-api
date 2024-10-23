@@ -979,3 +979,12 @@ class DepartmentAttendanceView(generics.ListAPIView):
         return Attendance.objects.filter(
             employee_assignment__assignment_group__department_id=department_id
         )
+
+class EmployeeAttendanceHistoryView(generics.ListAPIView):
+    serializer_class = AttendanceSerializer
+
+    def get_queryset(self):
+        employee_id = self.kwargs['employee_id']
+        return Attendance.objects.filter(
+            employee_assignment__employee_id=employee_id
+        ).order_by('-date')
