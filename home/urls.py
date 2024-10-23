@@ -22,4 +22,6 @@ urlpatterns = [
 
     path('fields/', FieldListCreateView.as_view(), name='getFieldListCreate'),
     path('field/<int:field_id>/', FieldRetrieveUpdateDestroyView.as_view(), name='fieldRetrieveUpdateDestroy'),
+
+    path('assignments/', AssignmentListCreateView.as_view(), name='getAssignmentListCreate'),
 ]  + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

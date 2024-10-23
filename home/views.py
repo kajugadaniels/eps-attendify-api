@@ -1,4 +1,5 @@
 from home.serializers import *
+from django.db.models import Count, Q
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth import authenticate
@@ -485,3 +486,59 @@ class FieldRetrieveUpdateDestroyView(APIView):
         # Deleting the user
         field.delete()
         return Response({"message": "Field deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+
+class AssignmentListCreateView(APIView):
+    """
+    API view to list all assignments or create a new assignment group.
+    Shows detailed information including all employees, field, and department details.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            # Check if the user is authorized
+            if not (request.user.is_superuser or request.user.role == 'Admin'):
+                return Response(
+                    {"error": "You do not have permission to view assignments."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            # Get query parameters for filtering
+            field_id = request.query_params.get('field')
+            department_id = request.query_params.get('department')
+            is_active = request.query_params.get('is_active')
+            
+            # Start with all assignment groups
+            assignments = AssignmentGroup.objects.all()
+            
+            # Apply filters if provided
+            if field_id:
+                assignments = assignments.filter(field_id=field_id)
+            if department_id:
+                assignments = assignments.filter(department_id=department_id)
+            if is_active is not None:
+                is_active = is_active.lower() == 'true'
+                assignments = assignments.filter(is_active=is_active)
+
+            # Annotate with employee counts
+            assignments = assignments.annotate(
+                total_employees=Count('employee_assignments'),
+                active_employees=Count(
+                    'employee_assignments',
+                    filter=Q(employee_assignments__status='active')
+                )
+            ).order_by('-created_date')
+
+            # Serialize the data with the detailed serializer
+            serializer = AssignmentGroupDetailSerializer(assignments, many=True)
+            
+            return Response({
+                "count": assignments.count(),
+                "results": serializer.data
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
