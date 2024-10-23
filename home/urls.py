@@ -13,4 +13,6 @@ urlpatterns = [
 
     path('users/', UserListView.as_view(), name='getUsers'),
     path('user/<int:user_id>/', UserDetailView.as_view(), name='userDetail'),
+
+    path('departments/', DepartmentListCreateView.as_view(), name='getDepartmentListCreate'),
 ]  + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

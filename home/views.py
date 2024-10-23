@@ -206,3 +206,26 @@ class UserDetailView(APIView):
         # Deleting the user
         user.delete()
         return Response({"message": "User deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+
+class DepartmentListCreateView(APIView):
+    """
+    API view to list all departments with their roles or create a new department.
+    Only superuser and departments with the 'Admin' role can view or add departments.
+    """
+    permission_classes = [IsAuthenticated]  # Allow access to authenticated departments
+
+    def get(self, request):
+        try:
+            # Check if the department is a superuser or has the role of 'Admin'
+            if request.user.is_superuser or request.user.role == 'Admin':
+                departments = Department.objects.all().order_by('-id')
+            else:
+                # If the department is not authorized, return a forbidden response
+                return Response({"error": "You do not have permission to view this resource."},
+                                status=status.HTTP_403_FORBIDDEN)
+
+            # Serialize department data with roles
+            serializer = DepartmentSerializer(departments, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
