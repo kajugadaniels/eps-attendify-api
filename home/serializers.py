@@ -35,3 +35,14 @@ class DepartmentSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'name', 'day_salary'
         )
+
+class EmployeeSerializer(serializers.ModelSerializer):
+    department = serializers.PrimaryKeyRelatedField(queryset=Department.objects.all())
+    class Meta:
+        model = Employee
+        fields = (
+            'name', 'department', 'email', 'phone_number', 'address', 'tag_id', 'nid', 'address'
+        )
+
+    def get_department_name(self, obj):
+        return obj.department.name if obj.department else None
