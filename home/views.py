@@ -364,3 +364,18 @@ class EmployeeRetrieveUpdateDestroyView(APIView):
             return Response({"error": "Employee not found"}, status=status.HTTP_404_NOT_FOUND)
         serializer = EmployeeSerializer(employee)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def put(self, request, employee_id):
+        employee = self.get_object(employee_id)
+        if employee is None:
+            return Response({"error": "Employee not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Permission check: Only superusers or the user themselves can update
+        if not request.user.is_superuser:
+            return Response({"error": "You do not have permission to update this employee."}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = EmployeeSerializer(employee, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "Employee updated successfully", "user": serializer.data}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
