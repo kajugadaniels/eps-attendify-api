@@ -542,3 +542,68 @@ class AssignmentListCreateView(APIView):
                 {"error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+    def post(self, request):
+        try:
+            # Check if user has permission to create assignments
+            if not (request.user.is_superuser or request.user.role == 'Admin'):
+                return Response(
+                    {"error": "You do not have permission to create assignments."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            # First, create the assignment group
+            group_serializer = AssignmentGroupSerializer(data=request.data)
+            if not group_serializer.is_valid():
+                return Response({
+                    "message": "Assignment group creation failed",
+                    "errors": group_serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Save the assignment group
+            assignment_group = group_serializer.save()
+
+            # If employees were provided, assign them to the group
+            employees = request.data.get('employees', [])
+            successful_assignments = []
+            failed_assignments = []
+
+            for employee_id in employees:
+                try:
+                    assignment = EmployeeAssignment.objects.create(
+                        assignment_group=assignment_group,
+                        employee_id=employee_id
+                    )
+                    successful_assignments.append(employee_id)
+                except Exception as e:
+                    failed_assignments.append({
+                        "employee_id": employee_id,
+                        "error": str(e)
+                    })
+
+            # Get the updated assignment group with all its details
+            updated_serializer = AssignmentGroupDetailSerializer(assignment_group)
+
+            response_data = {
+                "message": "Assignment group created successfully",
+                "assignment_group": updated_serializer.data,
+                "assignments_summary": {
+                    "successful_assignments": successful_assignments,
+                    "failed_assignments": failed_assignments
+                }
+            }
+
+            return Response(
+                response_data,
+                status=status.HTTP_201_CREATED if not failed_assignments else status.HTTP_207_MULTI_STATUS
+            )
+
+        except Exception as e:
+            # If the group was created but employee assignments failed, delete the group
+            if 'assignment_group' in locals():
+                assignment_group.delete()
+            
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
