@@ -379,3 +379,16 @@ class EmployeeRetrieveUpdateDestroyView(APIView):
             serializer.save()
             return Response({"message": "Employee updated successfully", "user": serializer.data}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, employee_id):
+        employee = self.get_object(employee_id)
+        if employee is None:
+            return Response({"error": "Employee not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Permission check: Only superusers or users with specific permission can delete
+        if not request.user.is_superuser:
+            return Response({"error": "You do not have permission to delete this user."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Deleting the employee
+        employee.delete()
+        return Response({"message": "Employee deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
