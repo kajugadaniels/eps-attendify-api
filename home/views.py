@@ -229,3 +229,27 @@ class DepartmentListCreateView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def post(self, request):
+        try:
+            # Only superuser and departments with the 'Admin' role can create new departments
+            if not request.user.is_superuser and request.user.role != 'Admin':
+                return Response({"error": "You do not have permission to add a new department."},
+                                status=status.HTTP_403_FORBIDDEN)
+
+            # Use the DepartmentSerializer to validate and create a new department
+            serializer = DepartmentSerializer(data=request.data)
+            if serializer.is_valid():
+                department = serializer.save()
+                return Response({
+                    "message": "Department created successfully",
+                    "department": DepartmentSerializer(department).data
+                }, status=status.HTTP_201_CREATED)
+            else:
+                return Response({
+                    "message": "Department creation failed",
+                    "errors": serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
