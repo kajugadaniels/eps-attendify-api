@@ -322,3 +322,26 @@ class EmployeeListCreateView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def post(self, request):
+        try:
+            # Only superuser and employees with the 'Admin' role can create new employees
+            if not request.user.is_superuser and request.user.role != 'Admin':
+                return Response({"error": "You do not have permission to add a new employee."},
+                                status=status.HTTP_403_FORBIDDEN)
+
+            # Use the EmployeeSerializer to validate and create a new employee
+            serializer = EmployeeSerializer(data=request.data)
+            if serializer.is_valid():
+                employee = serializer.save()
+                return Response({
+                    "message": "Employee created successfully",
+                    "employee": EmployeeSerializer(employee).data
+                }, status=status.HTTP_201_CREATED)
+            else:
+                return Response({
+                    "message": "Employee creation failed",
+                    "errors": serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
