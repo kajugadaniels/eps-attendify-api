@@ -1,4 +1,6 @@
 from django.db import models
+from django.core.exceptions import ValidationError
+from django.utils.translation import gettext_lazy as _
 
 class Department(models.Model):
     name = models.CharField(max_length=100, null=True, blank=True)
@@ -26,15 +28,20 @@ class Field(models.Model):
     def __str__(self):
         return self.name
 
-class EmployeeAssignment(models.Model):
-    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="assignments")
-    field = models.ForeignKey(Field, on_delete=models.CASCADE, related_name="field_assignments")
-    department = models.ForeignKey(Department, on_delete=models.CASCADE, related_name="department_assignments")
-    assigned_date = models.DateField(auto_now_add=True)  # Automatically set the date when assigned
-    end_date = models.DateField(null=True, blank=True)  # Optional field to track the end of the assignment
-
-    class Meta:
-        unique_together = ['employee', 'field', 'department']  # Ensure an employee can only be assigned to one department and field at a time.
+class AssignmentGroup(models.Model):
+    name = models.CharField(max_length=100)
+    field = models.ForeignKey(Field, on_delete=models.CASCADE, related_name="assignment_groups")
+    department = models.ForeignKey(Department, on_delete=models.CASCADE, related_name="assignment_groups")
+    created_date = models.DateField(auto_now_add=True)
+    end_date = models.DateField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
 
     def __str__(self):
-        return f"{self.employee.name} assigned to {self.field.name} in {self.department.name}"
+        return f"{self.name} - {self.field.name} ({self.department.name})"
+    
+    def clean(self):
+        if self.end_date and self.end_date < self.created_date:
+            raise ValidationError(_("End date cannot be before creation date"))
+
+    class Meta:
+        unique_together = ['name', 'field', 'department']
