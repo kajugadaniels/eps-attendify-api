@@ -116,3 +116,44 @@ class AttendanceSerializer(serializers.ModelSerializer):
             'updated_at'
         ]
         read_only_fields = ['day_salary']
+
+class AttendanceMarkSerializer(serializers.Serializer):
+    tag_id = serializers.CharField(required=True)
+    date = serializers.DateField(required=False, default=timezone.now().date())
+    
+    def validate_tag_id(self, value):
+        try:
+            # Check if there's an active assignment for this tag_id
+            assignment = EmployeeAssignment.objects.get(
+                employee__tag_id=value,
+                status='active'
+            )
+            return value
+        except EmployeeAssignment.DoesNotExist:
+            raise serializers.ValidationError(
+                "No active assignment found for this tag ID"
+            )
+
+    def create(self, validated_data):
+        tag_id = validated_data.get('tag_id')
+        date = validated_data.get('date')
+
+        # Get the active assignment for this employee
+        assignment = EmployeeAssignment.objects.get(
+            employee__tag_id=tag_id,
+            status='active'
+        )
+
+        # Create or update attendance
+        attendance, created = Attendance.objects.get_or_create(
+            employee_assignment=assignment,
+            date=date,
+            defaults={'attended': True}
+        )
+
+        if not created:
+            # If attendance record already exists, toggle the attended status
+            attendance.attended = not attendance.attended
+            attendance.save()
+
+        return attendance
