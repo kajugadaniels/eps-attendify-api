@@ -26,3 +26,40 @@ class PermissionListView(generics.ListAPIView):
             raise PermissionDenied({'message': "You do not have permission to view permissions."})
 
         return super().get_queryset()
+
+class AssignPermissionView(APIView):
+    """
+    View to assign multiple permissions to a user. Handles cases where the user already has the permission and ensures only authorized users can assign permissions.
+    """
+    # Restrict this API to only those who can manage user permissions
+    permission_classes = [permissions.IsAdminUser]
+
+    def post(self, request, *args, **kwargs):
+        if not request.user.is_superuser:
+            # Check if the user has the permission to assign permissions
+            if not request.user.has_perm('auth.change_user'):
+                raise PermissionDenied({'message': "You do not have permission to assign permissions."})
+
+        user_id = request.data.get('user_id')
+        permission_codenames = request.data.get('permission_codename', [])
+        response_data = []
+
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({'message': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        for codename in permission_codenames:
+            try:
+                permission = Permission.objects.get(codename=codename)
+                if user.user_permissions.filter(id=permission.id).exists():
+                    response_data.append({'codename': codename, 'status': f'User already has the "{codename}" permission.'})
+                else:
+                    user.user_permissions.add(permission)
+                    response_data.append({'codename': codename, 'status': 'Permission assigned successfully.'})
+            except Permission.DoesNotExist:
+                response_data.append({'codename': codename, 'status': 'Permission not found.'})
+
+        if any(item['status'].startswith('User already has') for item in response_data):
+            return Response({'results': response_data}, status=status.HTTP_409_CONFLICT)
+        return Response({'results': response_data}, status=status.HTTP_200_OK)
