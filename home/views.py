@@ -193,3 +193,16 @@ class UserDetailView(APIView):
             serializer.save()
             return Response({"message": "User updated successfully", "user": serializer.data}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, user_id):
+        user = self.get_object(user_id)
+        if user is None:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Permission check: Only superusers or users with specific permission can delete
+        if not request.user.is_superuser:
+            return Response({"error": "You do not have permission to delete this user."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Deleting the user
+        user.delete()
+        return Response({"message": "User deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
