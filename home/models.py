@@ -45,3 +45,36 @@ class AssignmentGroup(models.Model):
 
     class Meta:
         unique_together = ['name', 'field', 'department']
+
+class EmployeeAssignment(models.Model):
+    ASSIGNMENT_STATUS = (
+        ('active', 'Active'),
+        ('completed', 'Completed'),
+        ('suspended', 'Suspended')
+    )
+
+    assignment_group = models.ForeignKey(AssignmentGroup, on_delete=models.CASCADE, related_name="employee_assignments")
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="assignments")
+    assigned_date = models.DateField(auto_now_add=True)
+    end_date = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=ASSIGNMENT_STATUS, default='active')
+    notes = models.TextField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ['assignment_group', 'employee']  # Prevent duplicate assignments
+
+    def __str__(self):
+        return f"{self.employee.name} in {self.assignment_group.name}"
+
+    def clean(self):
+        if self.end_date and self.end_date < self.assigned_date:
+            raise ValidationError(_("End date cannot be before assignment date"))
+        
+        # Check if employee is already assigned to another active group
+        if self.status == 'active':
+            active_assignments = EmployeeAssignment.objects.filter(
+                employee=self.employee,
+                status='active'
+            ).exclude(id=self.id)
+            if active_assignments.exists():
+                raise ValidationError(_("Employee is already assigned to another active group"))
