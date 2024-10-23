@@ -457,3 +457,18 @@ class FieldRetrieveUpdateDestroyView(APIView):
             return Response({"error": "Field not found"}, status=status.HTTP_404_NOT_FOUND)
         serializer = FieldSerializer(field)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def put(self, request, field_id):
+        field = self.get_object(field_id)
+        if field is None:
+            return Response({"error": "Field not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Permission check: Only superusers or the user themselves can update
+        if not request.user.is_superuser:
+            return Response({"error": "You do not have permission to update this field."}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = FieldSerializer(field, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "Field updated successfully", "user": serializer.data}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
