@@ -41,7 +41,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Employee
         fields = (
-            'name', 'department', 'email', 'phone_number', 'address', 'tag_id', 'nid', 'address'
+            'name', 'department', 'email', 'phone_number', 'address', 'tag_id', 'nid', 'rssb_number'
         )
 
     def get_department_name(self, obj):

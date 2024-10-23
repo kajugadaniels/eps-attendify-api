@@ -16,4 +16,6 @@ urlpatterns = [
 
     path('departments/', DepartmentListCreateView.as_view(), name='getDepartmentListCreate'),
     path('department/<int:department_id>/', DepartmentRetrieveUpdateDestroyView.as_view(), name='departmentRetrieveUpdateDestroy'),
+
+    path('employees/', EmployeeListCreateView.as_view(), name='getEmployeeListCreate'),
 ]  + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
