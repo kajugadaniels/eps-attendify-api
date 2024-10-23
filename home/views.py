@@ -964,3 +964,9 @@ class MarkAttendanceView(APIView):
                 status=status.HTTP_200_OK
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class TodayAttendanceView(generics.ListAPIView):
+    serializer_class = AttendanceSerializer
+
+    def get_queryset(self):
+        return Attendance.objects.filter(date=timezone.now().date())
