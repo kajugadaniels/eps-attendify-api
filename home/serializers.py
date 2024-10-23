@@ -95,3 +95,24 @@ class AssignmentGroupDetailSerializer(AssignmentGroupSerializer):
 
     def get_active_employees(self, obj):
         return obj.employee_assignments.filter(status='active').count()
+
+class AttendanceSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source='employee_assignment.employee.name', read_only=True)
+    department_name = serializers.CharField(
+        source='employee_assignment.assignment_group.department.name', 
+        read_only=True
+    )
+    
+    class Meta:
+        model = Attendance
+        fields = [
+            'id', 
+            'employee_name',
+            'department_name', 
+            'date', 
+            'attended',
+            'day_salary',
+            'created_at',
+            'updated_at'
+        ]
+        read_only_fields = ['day_salary']
