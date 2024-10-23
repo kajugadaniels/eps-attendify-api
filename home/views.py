@@ -1,4 +1,5 @@
 from home.serializers import *
+from django.db import transaction
 from django.db.models import Count, Q
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -603,6 +604,45 @@ class AssignmentListCreateView(APIView):
             if 'assignment_group' in locals():
                 assignment_group.delete()
             
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+class AssignmentRetrieveUpdateDestroyView(APIView):
+    """
+    API view to retrieve, update, or delete an assignment group by its ID.
+    Includes detailed information about all employees in the assignment.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self, assignment_id):
+        try:
+            return AssignmentGroup.objects.get(id=assignment_id)
+        except AssignmentGroup.DoesNotExist:
+            return None
+
+    def get(self, request, assignment_id):
+        """Retrieve detailed information about a specific assignment"""
+        try:
+            # Check permissions
+            if not (request.user.is_superuser or request.user.role == 'Admin'):
+                return Response(
+                    {"error": "You do not have permission to view this assignment."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            assignment = self.get_object(assignment_id)
+            if assignment is None:
+                return Response(
+                    {"error": "Assignment not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            serializer = AssignmentGroupDetailSerializer(assignment)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        except Exception as e:
             return Response(
                 {"error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
