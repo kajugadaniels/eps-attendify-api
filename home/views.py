@@ -415,3 +415,26 @@ class FieldListCreateView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def post(self, request):
+        try:
+            # Only superuser and fields with the 'Admin' role can create new fields
+            if not request.user.is_superuser and request.user.role != 'Admin':
+                return Response({"error": "You do not have permission to add a new field."},
+                                status=status.HTTP_403_FORBIDDEN)
+
+            # Use the FieldSerializer to validate and create a new field
+            serializer = FieldSerializer(data=request.data)
+            if serializer.is_valid():
+                field = serializer.save()
+                return Response({
+                    "message": "Field created successfully",
+                    "field": FieldSerializer(field).data
+                }, status=status.HTTP_201_CREATED)
+            else:
+                return Response({
+                    "message": "Field creation failed",
+                    "errors": serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
