@@ -21,4 +21,5 @@ urlpatterns = [
     path('employee/<int:employee_id>/', EmployeeRetrieveUpdateDestroyView.as_view(), name='employeeRetrieveUpdateDestroy'),
 
     path('fields/', FieldListCreateView.as_view(), name='getFieldListCreate'),
+    path('field/<int:field_id>/', FieldRetrieveUpdateDestroyView.as_view(), name='fieldRetrieveUpdateDestroy'),
 ]  + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

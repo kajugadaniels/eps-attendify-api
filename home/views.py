@@ -438,3 +438,22 @@ class FieldListCreateView(APIView):
                 }, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class FieldRetrieveUpdateDestroyView(APIView):
+    """
+    API view to retrieve, update, or delete a field's details by their ID.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self, field_id):
+        try:
+            return Field.objects.get(id=field_id)
+        except Field.DoesNotExist:
+            return None
+
+    def get(self, request, field_id):
+        field = self.get_object(field_id)
+        if field is None:
+            return Response({"error": "Field not found"}, status=status.HTTP_404_NOT_FOUND)
+        serializer = FieldSerializer(field)
+        return Response(serializer.data, status=status.HTTP_200_OK)
