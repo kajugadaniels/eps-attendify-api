@@ -50,6 +50,20 @@ class FieldSerializer(serializers.ModelSerializer):
             'id', 'name', 'address'
         )
 
+class EmployeeAssignmentSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source='employee.name', read_only=True)
+
+    class Meta:
+        model = EmployeeAssignment
+        fields = ['id', 'employee', 'employee_name', 'assignment_group', 
+                 'assigned_date', 'end_date', 'status', 'notes']
+        read_only_fields = ['assigned_date']
+
+    def validate(self, data):
+        if data.get('end_date') and data['end_date'] < data.get('assigned_date', timezone.now().date()):
+            raise serializers.ValidationError("End date cannot be before assignment date")
+        return data
+
 class AssignmentGroupSerializer(serializers.ModelSerializer):
     employee_assignments = EmployeeAssignmentSerializer(many=True, read_only=True)
     department_name = serializers.CharField(source='department.name', read_only=True)
@@ -66,3 +80,4 @@ class AssignmentGroupSerializer(serializers.ModelSerializer):
         if data.get('end_date') and data['end_date'] < data.get('created_date', timezone.now().date()):
             raise serializers.ValidationError("End date cannot be before creation date")
         return data
+
