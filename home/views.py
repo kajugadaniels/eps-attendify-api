@@ -769,7 +769,114 @@ class EndAssignmentView(APIView):
         except AssignmentGroup.DoesNotExist:
             return None
 
-    
+    @transaction.atomic
+    def post(self, request, assignment_id):
+        """
+        End an assignment group and all its employee assignments
+        
+        Expected payload:
+        {
+            "end_date": "YYYY-MM-DD",  # Optional, defaults to current date
+            "reason": "String",        # Optional, reason for ending the assignment
+            "end_notes": "String"      # Optional, additional notes
+        }
+        """
+        try:
+            # Check permissions
+            if not (request.user.is_superuser or request.user.role == 'Admin'):
+                return Response(
+                    {"error": "You do not have permission to end this assignment."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            # Get the assignment group
+            assignment = self.get_object(assignment_id)
+            if assignment is None:
+                return Response(
+                    {"error": "Assignment not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Check if assignment is already ended
+            if not assignment.is_active:
+                return Response(
+                    {"error": "This assignment has already been ended."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Get end date from request or use current date
+            end_date = request.data.get('end_date')
+            if end_date:
+                try:
+                    end_date = timezone.datetime.strptime(end_date, "%Y-%m-%d").date()
+                except ValueError:
+                    return Response(
+                        {"error": "Invalid date format. Use YYYY-MM-DD"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            else:
+                end_date = timezone.now().date()
+
+            # Validate end date
+            if end_date < assignment.created_date:
+                return Response(
+                    {"error": "End date cannot be before the assignment start date."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Start atomic transaction
+            with transaction.atomic():
+                # Update assignment group
+                assignment.end_date = end_date
+                assignment.is_active = False
+                if 'reason' in request.data:
+                    assignment.notes = (assignment.notes or '') + f"\nEnd reason: {request.data['reason']}"
+                if 'end_notes' in request.data:
+                    assignment.notes = (assignment.notes or '') + f"\nEnd notes: {request.data['end_notes']}"
+                assignment.save()
+
+                # Update all active employee assignments
+                active_assignments = EmployeeAssignment.objects.filter(
+                    assignment_group=assignment,
+                    status='active'
+                )
+
+                assignment_updates = []
+                for emp_assignment in active_assignments:
+                    emp_assignment.end_date = end_date
+                    emp_assignment.status = 'completed'
+                    if 'reason' in request.data:
+                        emp_assignment.notes = (emp_assignment.notes or '') + f"\nEnd reason: {request.data['reason']}"
+                    assignment_updates.append(emp_assignment)
+
+                # Bulk update employee assignments
+                if assignment_updates:
+                    EmployeeAssignment.objects.bulk_update(
+                        assignment_updates,
+                        ['end_date', 'status', 'notes']
+                    )
+
+                # Get updated assignment data
+                updated_serializer = AssignmentGroupDetailSerializer(assignment)
+
+                # Prepare response summary
+                response_data = {
+                    "message": "Assignment ended successfully",
+                    "end_date": end_date.strftime("%Y-%m-%d"),
+                    "employees_updated": len(assignment_updates),
+                    "assignment": updated_serializer.data
+                }
+
+                if 'reason' in request.data:
+                    response_data["reason"] = request.data['reason']
+
+                return Response(response_data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     def get(self, request, assignment_id):
         """
