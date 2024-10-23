@@ -2,13 +2,12 @@ from home.serializers import *
 from django.db import transaction
 from django.db.models import Count, Q
 from rest_framework.views import APIView
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.contrib.auth import authenticate
-from rest_framework.authtoken.models import Token
-from rest_framework.generics import ListAPIView
 from django.core.exceptions import PermissionDenied
+from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics, permissions, status
-from rest_framework.permissions import IsAuthenticated, AllowAny
 
 class PermissionListView(generics.ListAPIView):
     """
@@ -945,3 +944,7 @@ class EndAssignmentView(APIView):
                 {"error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+class AttendanceListCreateView(generics.ListCreateAPIView):
+    queryset = Attendance.objects.all()
+    serializer_class = AttendanceSerializer
