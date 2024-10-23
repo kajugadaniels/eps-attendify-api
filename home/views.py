@@ -759,7 +759,7 @@ class AssignmentRetrieveUpdateDestroyView(APIView):
 class EndAssignmentView(APIView):
     """
     API view to end an assignment group and all its employee assignments.
-    This will set end dates and update statuses appropriately.
+    Sets the same end date for both the group and all employee assignments.
     """
     permission_classes = [permissions.IsAuthenticated]
 
@@ -778,7 +778,6 @@ class EndAssignmentView(APIView):
         {
             "end_date": "YYYY-MM-DD",  # Optional, defaults to current date
             "reason": "String",        # Optional, reason for ending the assignment
-            "end_notes": "String"      # Optional, additional notes
         }
         """
         try:
@@ -829,11 +828,22 @@ class EndAssignmentView(APIView):
                 # Update assignment group
                 assignment.end_date = end_date
                 assignment.is_active = False
+                
+                # Add reason to notes if provided
                 if 'reason' in request.data:
-                    assignment.notes = (assignment.notes or '') + f"\nEnd reason: {request.data['reason']}"
-                if 'end_notes' in request.data:
-                    assignment.notes = (assignment.notes or '') + f"\nEnd notes: {request.data['end_notes']}"
-                assignment.save()
+                    current_notes = assignment.notes or ""
+                    timestamp = timezone.now().strftime("%Y-%m-%d %H:%M:%S")
+                    new_note = f"\n[{timestamp}] Assignment ended - Reason: {request.data['reason']}"
+                    assignment.notes = current_notes + new_note
+                
+                try:
+                    assignment.clean()  # Run model validation
+                    assignment.save()
+                except ValidationError as e:
+                    return Response(
+                        {"error": str(e)},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
 
                 # Update all active employee assignments
                 active_assignments = EmployeeAssignment.objects.filter(
@@ -841,19 +851,23 @@ class EndAssignmentView(APIView):
                     status='active'
                 )
 
-                assignment_updates = []
+                # Prepare bulk update data
                 for emp_assignment in active_assignments:
                     emp_assignment.end_date = end_date
                     emp_assignment.status = 'completed'
-                    if 'reason' in request.data:
-                        emp_assignment.notes = (emp_assignment.notes or '') + f"\nEnd reason: {request.data['reason']}"
-                    assignment_updates.append(emp_assignment)
+                    try:
+                        emp_assignment.clean()  # Run model validation
+                    except ValidationError as e:
+                        return Response(
+                            {"error": f"Error updating employee {emp_assignment.employee.name}: {str(e)}"},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
 
                 # Bulk update employee assignments
-                if assignment_updates:
+                if active_assignments:
                     EmployeeAssignment.objects.bulk_update(
-                        assignment_updates,
-                        ['end_date', 'status', 'notes']
+                        active_assignments,
+                        ['end_date', 'status']
                     )
 
                 # Get updated assignment data
@@ -863,7 +877,7 @@ class EndAssignmentView(APIView):
                 response_data = {
                     "message": "Assignment ended successfully",
                     "end_date": end_date.strftime("%Y-%m-%d"),
-                    "employees_updated": len(assignment_updates),
+                    "employees_updated": active_assignments.count(),
                     "assignment": updated_serializer.data
                 }
 
@@ -902,14 +916,23 @@ class EndAssignmentView(APIView):
             active_assignments = EmployeeAssignment.objects.filter(
                 assignment_group=assignment,
                 status='active'
-            )
+            ).select_related('employee')
 
             response_data = {
                 "can_end": assignment.is_active,
                 "is_active": assignment.is_active,
                 "active_employees": active_assignments.count(),
+                "active_employee_list": [
+                    {
+                        "id": assign.employee.id,
+                        "name": assign.employee.name,
+                        "assignment_date": assign.assigned_date.strftime("%Y-%m-%d")
+                    }
+                    for assign in active_assignments
+                ],
                 "start_date": assignment.created_date.strftime("%Y-%m-%d"),
-                "current_status": "Active" if assignment.is_active else "Ended"
+                "current_status": "Active" if assignment.is_active else "Ended",
+                "notes": assignment.notes
             }
 
             if not assignment.is_active:
