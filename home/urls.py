@@ -19,4 +19,6 @@ urlpatterns = [
 
     path('employees/', EmployeeListCreateView.as_view(), name='getEmployeeListCreate'),
     path('employee/<int:employee_id>/', EmployeeRetrieveUpdateDestroyView.as_view(), name='employeeRetrieveUpdateDestroy'),
+
+    path('fields/', FieldListCreateView.as_view(), name='getFieldListCreate'),
 ]  + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

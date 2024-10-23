@@ -392,3 +392,26 @@ class EmployeeRetrieveUpdateDestroyView(APIView):
         # Deleting the employee
         employee.delete()
         return Response({"message": "Employee deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+
+class FieldListCreateView(APIView):
+    """
+    API view to list all fields with their roles or create a new field.
+    Only superuser and fields with the 'Admin' role can view or add fields.
+    """
+    permission_classes = [IsAuthenticated]  # Allow access to authenticated fields
+
+    def get(self, request):
+        try:
+            # Check if the field is a superuser or has the role of 'Admin'
+            if request.user.is_superuser or request.user.role == 'Admin':
+                fields = Field.objects.all().order_by('-id')
+            else:
+                # If the field is not authorized, return a forbidden response
+                return Response({"error": "You do not have permission to view this resource."},
+                                status=status.HTTP_403_FORBIDDEN)
+
+            # Serialize field data with roles
+            serializer = FieldSerializer(fields, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
