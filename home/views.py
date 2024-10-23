@@ -755,3 +755,63 @@ class AssignmentRetrieveUpdateDestroyView(APIView):
                 {"error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+class EndAssignmentView(APIView):
+    """
+    API view to end an assignment group and all its employee assignments.
+    This will set end dates and update statuses appropriately.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self, assignment_id):
+        try:
+            return AssignmentGroup.objects.get(id=assignment_id)
+        except AssignmentGroup.DoesNotExist:
+            return None
+
+    
+
+    def get(self, request, assignment_id):
+        """
+        Get information about whether an assignment can be ended
+        and any potential issues that need to be resolved
+        """
+        try:
+            # Check permissions
+            if not (request.user.is_superuser or request.user.role == 'Admin'):
+                return Response(
+                    {"error": "You do not have permission to view this information."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            assignment = self.get_object(assignment_id)
+            if assignment is None:
+                return Response(
+                    {"error": "Assignment not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Get active employee assignments
+            active_assignments = EmployeeAssignment.objects.filter(
+                assignment_group=assignment,
+                status='active'
+            )
+
+            response_data = {
+                "can_end": assignment.is_active,
+                "is_active": assignment.is_active,
+                "active_employees": active_assignments.count(),
+                "start_date": assignment.created_date.strftime("%Y-%m-%d"),
+                "current_status": "Active" if assignment.is_active else "Ended"
+            }
+
+            if not assignment.is_active:
+                response_data["end_date"] = assignment.end_date.strftime("%Y-%m-%d") if assignment.end_date else None
+
+            return Response(response_data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
