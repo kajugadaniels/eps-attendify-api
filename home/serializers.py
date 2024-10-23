@@ -1,3 +1,4 @@
+from home.models import *
 from account.models import *
 from rest_framework import serializers
 from django.contrib.auth.models import Permission
@@ -27,3 +28,10 @@ class UserSerializer(serializers.ModelSerializer):
         user.save()
 
         return user
+
+class DepartmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Department
+        fields = (
+            'id', 'name'
+        )
