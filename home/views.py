@@ -647,3 +647,77 @@ class AssignmentRetrieveUpdateDestroyView(APIView):
                 {"error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+    @transaction.atomic
+    def put(self, request, assignment_id):
+        """Update an existing assignment group and its employee assignments"""
+        try:
+            # Check permissions
+            if not (request.user.is_superuser or request.user.role == 'Admin'):
+                return Response(
+                    {"error": "You do not have permission to update this assignment."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            assignment = self.get_object(assignment_id)
+            if assignment is None:
+                return Response(
+                    {"error": "Assignment not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Create a transaction savepoint
+            with transaction.atomic():
+                # Update basic assignment group information
+                group_serializer = AssignmentGroupSerializer(
+                    assignment,
+                    data=request.data,
+                    partial=True
+                )
+                if not group_serializer.is_valid():
+                    return Response({
+                        "message": "Assignment update failed",
+                        "errors": group_serializer.errors
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+                assignment = group_serializer.save()
+
+                # Handle employee updates if provided
+                if 'employees' in request.data:
+                    new_employee_ids = set(request.data['employees'])
+                    current_employee_ids = set(
+                        assignment.employee_assignments.values_list('employee_id', flat=True)
+                    )
+
+                    # Remove employees not in the new list
+                    employees_to_remove = current_employee_ids - new_employee_ids
+                    if employees_to_remove:
+                        EmployeeAssignment.objects.filter(
+                            assignment_group=assignment,
+                            employee_id__in=employees_to_remove
+                        ).delete()
+
+                    # Add new employees
+                    employees_to_add = new_employee_ids - current_employee_ids
+                    for employee_id in employees_to_add:
+                        try:
+                            EmployeeAssignment.objects.create(
+                                assignment_group=assignment,
+                                employee_id=employee_id
+                            )
+                        except Exception as e:
+                            # Log the error but continue processing
+                            print(f"Error adding employee {employee_id}: {str(e)}")
+
+                # Get updated assignment data
+                updated_serializer = AssignmentGroupDetailSerializer(assignment)
+                return Response({
+                    "message": "Assignment updated successfully",
+                    "assignment": updated_serializer.data
+                }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
