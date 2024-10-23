@@ -948,3 +948,8 @@ class EndAssignmentView(APIView):
 class AttendanceListCreateView(generics.ListCreateAPIView):
     queryset = Attendance.objects.all()
     serializer_class = AttendanceSerializer
+
+class AttendanceRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Attendance.objects.all()
+    serializer_class = AttendanceSerializer
+    lookup_url_kwarg = 'attendance_id'
