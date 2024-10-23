@@ -2,10 +2,11 @@ from account.models import *
 from rest_framework import serializers
 
 class UserSerializer(serializers.ModelSerializer):
+    user_permissions = serializers.SerializerMethodField()
     class Meta:
         model = User
         fields = (
-            'id', 'name', 'email', 'phone_number', 'role', 'password'
+            'id', 'name', 'email', 'phone_number', 'role', 'password', 'user_permissions'
         )
 
     def create(self, validated_data):

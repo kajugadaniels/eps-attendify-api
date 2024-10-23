@@ -15,6 +15,10 @@ class UserSerializer(serializers.ModelSerializer):
             'id', 'name', 'email', 'phone_number', 'role', 'password', 'user_permissions'
         )
 
+    def get_user_permissions(self, obj):
+        """Retrieve the user's direct permissions."""
+        return obj.get_all_permissions()
+
     def create(self, validated_data):
         password = validated_data.pop('password', None)
         user = User.objects.create_user(**validated_data)
