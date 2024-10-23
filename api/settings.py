@@ -148,7 +148,7 @@ WHITENOISE_AUTOREFRESH = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-AUTH_USER_MODEL = 'users.User'
+AUTH_USER_MODEL = 'account.User'
 
 CORS_ALLOW_ALL_ORIGINS = True
 APPEND_SLASH = False
