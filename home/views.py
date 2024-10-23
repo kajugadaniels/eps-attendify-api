@@ -286,3 +286,16 @@ class DepartmentRetrieveUpdateDestroyView(APIView):
             serializer.save()
             return Response({"message": "Department updated successfully", "user": serializer.data}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, department_id):
+        department = self.get_object(department_id)
+        if department is None:
+            return Response({"error": "Department not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Permission check: Only superusers or users with specific permission can delete
+        if not request.user.is_superuser:
+            return Response({"error": "You do not have permission to delete this user."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Deleting the department
+        department.delete()
+        return Response({"message": "Department deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
