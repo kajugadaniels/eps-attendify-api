@@ -178,33 +178,3 @@ class UserDetailView(APIView):
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
         serializer = UserSerializer(user)
         return Response(serializer.data, status=status.HTTP_200_OK)
-
-    def put(self, request, user_id):
-        user = self.get_object(user_id)
-        if user is None:
-            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-
-        # Permission check: Only superusers or the user themselves can update
-        if not request.user.is_superuser and request.user.id != user.id:
-            return Response({"error": "You do not have permission to edit this user."}, status=status.HTTP_403_FORBIDDEN)
-
-        serializer = UserSerializer(user, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response({"message": "User updated successfully", "user": serializer.data}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def patch(self, request, user_id):
-        user = self.get_object(user_id)
-        if user is None:
-            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-
-        # Permission check: Only superusers or the user themselves can update
-        if not request.user.is_superuser and request.user.id != user.id:
-            return Response({"error": "You do not have permission to edit this user."}, status=status.HTTP_403_FORBIDDEN)
-
-        serializer = UserSerializer(user, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response({"message": "User updated successfully", "user": serializer.data}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
