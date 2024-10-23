@@ -953,3 +953,14 @@ class AttendanceRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView)
     queryset = Attendance.objects.all()
     serializer_class = AttendanceSerializer
     lookup_url_kwarg = 'attendance_id'
+
+class MarkAttendanceView(APIView):
+    def post(self, request):
+        serializer = AttendanceMarkSerializer(data=request.data)
+        if serializer.is_valid():
+            attendance = serializer.save()
+            return Response(
+                AttendanceSerializer(attendance).data,
+                status=status.HTTP_200_OK
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
