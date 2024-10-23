@@ -147,7 +147,7 @@ class UserListView(APIView):
     def get(self, request):
         try:
             # Check if the user is a superuser or has the role of 'Admin'
-            if request.user.is_superuser or request.user.role == 'Admin':
+            if request.user.is_superuser:
                 users = User.objects.all().order_by('-id')
             else:
                 # If the user is not authorized, return a forbidden response
@@ -253,3 +253,21 @@ class DepartmentListCreateView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+class DepartmentRetrieveUpdateDestroyView(APIView):
+    """
+    API view to retrieve, update, or delete a department's details by their ID.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self, department_id):
+        try:
+            return Department.objects.get(id=department_id)
+        except Department.DoesNotExist:
+            return None
+
+    def get(self, request, department_id):
+        department = self.get_object(department_id)
+        if department is None:
+            return Response({"error": "Department not found"}, status=status.HTTP_404_NOT_FOUND)
+        serializer = DepartmentSerializer(department)
+        return Response(serializer.data, status=status.HTTP_200_OK)
