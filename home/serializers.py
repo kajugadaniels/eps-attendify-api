@@ -81,3 +81,17 @@ class AssignmentGroupSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("End date cannot be before creation date")
         return data
 
+class AssignmentGroupDetailSerializer(AssignmentGroupSerializer):
+    """Detailed serializer for retrieving assignment group information"""
+    employee_assignments = EmployeeAssignmentSerializer(many=True, read_only=True)
+    total_employees = serializers.SerializerMethodField()
+    active_employees = serializers.SerializerMethodField()
+
+    class Meta(AssignmentGroupSerializer.Meta):
+        fields = AssignmentGroupSerializer.Meta.fields + ['total_employees', 'active_employees']
+
+    def get_total_employees(self, obj):
+        return obj.employee_assignments.count()
+
+    def get_active_employees(self, obj):
+        return obj.employee_assignments.filter(status='active').count()
