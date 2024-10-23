@@ -345,3 +345,22 @@ class EmployeeListCreateView(APIView):
                 }, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class EmployeeRetrieveUpdateDestroyView(APIView):
+    """
+    API view to retrieve, update, or delete a employee's details by their ID.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self, employee_id):
+        try:
+            return Employee.objects.get(id=employee_id)
+        except Employee.DoesNotExist:
+            return None
+
+    def get(self, request, employee_id):
+        employee = self.get_object(employee_id)
+        if employee is None:
+            return Response({"error": "Employee not found"}, status=status.HTTP_404_NOT_FOUND)
+        serializer = EmployeeSerializer(employee)
+        return Response(serializer.data, status=status.HTTP_200_OK)
