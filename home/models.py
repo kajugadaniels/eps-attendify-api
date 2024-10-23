@@ -35,6 +35,7 @@ class AssignmentGroup(models.Model):
     created_date = models.DateField(auto_now_add=True)
     end_date = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
+    notes = models.TextField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.name} - {self.field.name} ({self.department.name})"
@@ -58,7 +59,6 @@ class EmployeeAssignment(models.Model):
     assigned_date = models.DateField(auto_now_add=True)
     end_date = models.DateField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=ASSIGNMENT_STATUS, default='active')
-    notes = models.TextField(null=True, blank=True)
 
     class Meta:
         unique_together = ['assignment_group', 'employee']  # Prevent duplicate assignments
