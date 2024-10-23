@@ -721,3 +721,37 @@ class AssignmentRetrieveUpdateDestroyView(APIView):
                 {"error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+    def delete(self, request, assignment_id):
+        """Delete an assignment group and all its employee assignments"""
+        try:
+            # Check permissions
+            if not (request.user.is_superuser or request.user.role == 'Admin'):
+                return Response(
+                    {"error": "You do not have permission to delete this assignment."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            assignment = self.get_object(assignment_id)
+            if assignment is None:
+                return Response(
+                    {"error": "Assignment not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Store assignment details for response
+            assignment_details = AssignmentGroupDetailSerializer(assignment).data
+
+            # Delete the assignment (this will cascade delete all employee assignments)
+            assignment.delete()
+
+            return Response({
+                "message": "Assignment deleted successfully",
+                "deleted_assignment": assignment_details
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
