@@ -98,3 +98,41 @@ class RemovePermissionView(APIView):
                 results.append({"codename": codename, "status": "Permission not found."})
 
         return Response({"results": results}, status=status.HTTP_200_OK)
+
+class UserPermissionsView(APIView):
+    """
+    View to list all permissions of a specific user.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, user_id, *args, **kwargs):
+        # Superusers can access without restrictions
+        if not request.user.is_superuser:
+            # Check if the user has permission to view user permissions
+            if not request.user.has_perm('auth.view_permission'):
+                raise PermissionDenied({'message': "You do not have permission to perform this action."})
+
+        try:
+            user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return Response({'message': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            # Retrieve all user permissions, including group permissions
+            user_permissions = user.user_permissions.all() | Permission.objects.filter(group__user=user)
+            permissions_data = [{
+                'id': perm.id,
+                'name': perm.name,
+                'codename': perm.codename,
+                'content_type': perm.content_type.model
+            } for perm in user_permissions.distinct()]
+
+            return Response({
+                'message': 'Permissions retrieved successfully.',
+                'permissions': permissions_data
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({
+                'message': 'Failed to retrieve permissions.',
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
