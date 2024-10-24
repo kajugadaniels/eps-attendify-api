@@ -159,16 +159,24 @@ class AttendanceMarkSerializer(serializers.Serializer):
             status='active'
         )
 
-        # Create or update attendance
-        attendance, created = Attendance.objects.get_or_create(
+        # Check if attendance already exists and is marked as attended
+        existing_attendance = Attendance.objects.filter(
+            employee_assignment=assignment,
+            date=date
+        ).first()
+
+        if existing_attendance:
+            if existing_attendance.attended:
+                raise serializers.ValidationError({
+                    "attendance": "Employee has already been marked as attended for this date"
+                })
+            existing_attendance.attended = True
+            existing_attendance.save()
+            return existing_attendance
+
+        # Create new attendance record
+        return Attendance.objects.create(
             employee_assignment=assignment,
             date=date,
-            defaults={'attended': True}
+            attended=True
         )
-
-        if not created:
-            # If attendance record already exists, toggle the attended status
-            attendance.attended = not attendance.attended
-            attendance.save()
-
-        return attendance
