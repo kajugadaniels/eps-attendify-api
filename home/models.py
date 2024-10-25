@@ -47,13 +47,13 @@ class AssignmentGroup(models.Model):
             raise ValidationError(_("End date cannot be before creation date"))
         
         # Prevent supervisor from being assigned as an employee in any active group
-        if self.supervisor:
-            supervisor_assignments = EmployeeAssignment.objects.filter(
-                employee=self.supervisor,
-                status='active'
-            )
-            if supervisor_assignments.exists():
-                raise ValidationError(_("Supervisor cannot be assigned as an employee"))
+        # if self.supervisor:
+        #     supervisor_assignments = EmployeeAssignment.objects.filter(
+        #         employee=self.supervisor,
+        #         status='active'
+        #     )
+        #     if supervisor_assignments.exists():
+        #         raise ValidationError(_("Supervisor cannot be assigned as an employee"))
 
     class Meta:
         unique_together = ['name', 'field', 'department']

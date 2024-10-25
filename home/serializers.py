@@ -83,16 +83,16 @@ class AssignmentGroupSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("End date cannot be before creation date")
 
         # Validate that supervisor is not assigned as an employee
-        if 'supervisor' in data:
-            supervisor = data['supervisor']
-            active_assignments = EmployeeAssignment.objects.filter(
-                employee=supervisor,
-                status='active'
-            )
-            if active_assignments.exists():
-                raise serializers.ValidationError(
-                    {"supervisor": "This employee is currently assigned as a worker and cannot be a supervisor"}
-                )
+        # if 'supervisor' in data:
+        #     supervisor = data['supervisor']
+        #     active_assignments = EmployeeAssignment.objects.filter(
+        #         employee=supervisor,
+        #         status='active'
+        #     )
+        #     if active_assignments.exists():
+        #         raise serializers.ValidationError(
+        #             {"supervisor": "This employee is currently assigned as a worker and cannot be a supervisor"}
+        #         )
         return data
 
 class AssignmentGroupDetailSerializer(AssignmentGroupSerializer):
