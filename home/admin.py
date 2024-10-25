@@ -19,34 +19,15 @@ class FieldAdmin(admin.ModelAdmin):
 
 @admin.register(AssignmentGroup)
 class AssignmentGroupAdmin(admin.ModelAdmin):
-    list_display = ('name', 'field', 'department', 'created_date', 'end_date', 'is_active')
+    list_display = ('name', 'supervisor', 'field', 'department', 'end_date', 'is_active')
     list_filter = ('department', 'field', 'is_active')
-    search_fields = ('name', 'field__name', 'department__name')
-    date_hierarchy = 'created_date'
-    ordering = ('-created_date',)
-    fieldsets = (
-        (None, {
-            'fields': ('name', 'field', 'department', 'is_active', 'notes')
-        }),
-        ('Dates', {
-            'fields': ('created_date', 'end_date')
-        }),
-    )
+    search_fields = ('name', 'supervisor', 'field__name', 'department__name')
 
 @admin.register(EmployeeAssignment)
 class EmployeeAssignmentAdmin(admin.ModelAdmin):
-    list_display = ('employee', 'assignment_group', 'supervisor', 'assigned_date', 'end_date', 'status')
-    list_filter = ('status', 'assigned_date')
+    list_display = ('employee', 'assignment_group', 'end_date', 'status')
+    list_filter = ('status', )
     search_fields = ('employee__name', 'assignment_group__name')
-    date_hierarchy = 'assigned_date'
-    fieldsets = (
-        (None, {
-            'fields': ('employee', 'assignment_group', 'supervisor', 'status')
-        }),
-        ('Dates', {
-            'fields': ('assigned_date', 'end_date')
-        }),
-    )
 
 @admin.register(Attendance)
 class AttendanceAdmin(admin.ModelAdmin):
