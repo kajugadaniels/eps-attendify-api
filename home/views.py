@@ -6,8 +6,8 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.core.exceptions import PermissionDenied
-from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics, permissions, status
+from rest_framework.permissions import IsAuthenticated, AllowAny
 
 class PermissionListView(generics.ListAPIView):
     """
@@ -955,14 +955,23 @@ class AttendanceRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView)
     lookup_url_kwarg = 'attendance_id'
 
 class MarkAttendanceView(APIView):
+    permission_classes = [AllowAny]  # Allow any user to access this view
+    authentication_classes = []      # No authentication required
+    
     def post(self, request):
         serializer = AttendanceMarkSerializer(data=request.data)
         if serializer.is_valid():
-            attendance = serializer.save()
-            return Response(
-                AttendanceSerializer(attendance).data,
-                status=status.HTTP_200_OK
-            )
+            try:
+                attendance = serializer.save()
+                return Response(
+                    AttendanceSerializer(attendance).data,
+                    status=status.HTTP_200_OK
+                )
+            except Exception as e:
+                return Response(
+                    {"error": str(e)},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class TodayAttendanceView(generics.ListAPIView):
