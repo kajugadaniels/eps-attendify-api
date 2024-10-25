@@ -116,6 +116,7 @@ class AttendanceSerializer(serializers.ModelSerializer):
         source='employee_assignment.assignment_group.department.name', 
         read_only=True
     )
+    is_supervisor = serializers.BooleanField(default=False)
     
     class Meta:
         model = Attendance
@@ -126,6 +127,7 @@ class AttendanceSerializer(serializers.ModelSerializer):
             'date', 
             'attended',
             'day_salary',
+            'is_supervisor',
             'created_at',
             'updated_at'
         ]
@@ -136,46 +138,73 @@ class AttendanceMarkSerializer(serializers.Serializer):
     date = serializers.DateField(required=False, default=timezone.now().date())
     
     def validate_tag_id(self, value):
+        # First check if it's a supervisor
         try:
-            # Check if there's an active assignment for this tag_id
-            assignment = EmployeeAssignment.objects.get(
-                employee__tag_id=value,
-                status='active'
+            AssignmentGroup.objects.get(
+                supervisor__tag_id=value,
+                is_active=True
             )
             return value
-        except EmployeeAssignment.DoesNotExist:
-            raise serializers.ValidationError(
-                "No active assignment found for this tag ID"
-            )
+        except AssignmentGroup.DoesNotExist:
+            # If not a supervisor, check if it's an employee
+            try:
+                EmployeeAssignment.objects.get(
+                    employee__tag_id=value,
+                    status='active'
+                )
+                return value
+            except EmployeeAssignment.DoesNotExist:
+                raise serializers.ValidationError(
+                    "No active assignment found for this tag ID"
+                )
 
     def create(self, validated_data):
         tag_id = validated_data.get('tag_id')
         date = validated_data.get('date')
 
-        # Get the active assignment for this employee
-        assignment = EmployeeAssignment.objects.get(
-            employee__tag_id=tag_id,
-            status='active'
-        )
+        # Try to get supervisor assignment first
+        try:
+            assignment_group = AssignmentGroup.objects.get(
+                supervisor__tag_id=tag_id,
+                is_active=True
+            )
+            # Create a special case for supervisor attendance
+            employee_assignment = EmployeeAssignment.objects.filter(
+                assignment_group=assignment_group
+            ).first()
+            is_supervisor = True
+        except AssignmentGroup.DoesNotExist:
+            # If not supervisor, get employee assignment
+            employee_assignment = EmployeeAssignment.objects.get(
+                employee__tag_id=tag_id,
+                status='active'
+            )
+            is_supervisor = False
 
-        # Check if attendance already exists and is marked as attended
+        # Check if attendance already exists
         existing_attendance = Attendance.objects.filter(
-            employee_assignment=assignment,
+            employee_assignment=employee_assignment,
             date=date
         ).first()
 
         if existing_attendance:
             if existing_attendance.attended:
                 raise serializers.ValidationError({
-                    "attendance": "Employee has already been marked as attended for this date"
+                    "attendance": "Attendance has already been marked for this date"
                 })
             existing_attendance.attended = True
             existing_attendance.save()
             return existing_attendance
 
         # Create new attendance record
-        return Attendance.objects.create(
-            employee_assignment=assignment,
+        attendance = Attendance.objects.create(
+            employee_assignment=employee_assignment,
             date=date,
             attended=True
         )
+        
+        # Set is_supervisor flag
+        attendance.is_supervisor = is_supervisor
+        attendance.save()
+        
+        return attendance
