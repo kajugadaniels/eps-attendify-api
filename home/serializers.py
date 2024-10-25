@@ -52,18 +52,36 @@ class FieldSerializer(serializers.ModelSerializer):
 
 class EmployeeAssignmentSerializer(serializers.ModelSerializer):
     employee_name = serializers.CharField(source='employee.name', read_only=True)
-    supervisor_name = serializers.CharField(source='supervisor.name', read_only=True)
 
     class Meta:
         model = EmployeeAssignment
-        fields = ['id', 'employee', 'employee_name', 'supervisor', 'supervisor_name',
-                 'assignment_group', 'assigned_date', 'end_date', 'status']
+        fields = ['id', 'employee', 'employee_name', 'assignment_group', 
+                 'assigned_date', 'end_date', 'status']
         read_only_fields = ['assigned_date']
 
     def validate(self, data):
         if data.get('end_date') and data['end_date'] < data.get('assigned_date', timezone.now().date()):
             raise serializers.ValidationError("End date cannot be before assignment date")
-        
+        return data
+
+class AssignmentGroupSerializer(serializers.ModelSerializer):
+    employee_assignments = EmployeeAssignmentSerializer(many=True, read_only=True)
+    department_name = serializers.CharField(source='department.name', read_only=True)
+    field_name = serializers.CharField(source='field.name', read_only=True)
+    supervisor_name = serializers.CharField(source='supervisor.name', read_only=True)
+    
+    class Meta:
+        model = AssignmentGroup
+        fields = ['id', 'name', 'field', 'field_name', 'department', 
+                 'department_name', 'supervisor', 'supervisor_name',
+                 'created_date', 'end_date', 'notes', 'is_active', 
+                 'employee_assignments']
+        read_only_fields = ['created_date']
+
+    def validate(self, data):
+        if data.get('end_date') and data['end_date'] < data.get('created_date', timezone.now().date()):
+            raise serializers.ValidationError("End date cannot be before creation date")
+
         # Validate that supervisor is not assigned as an employee
         if 'supervisor' in data:
             supervisor = data['supervisor']
@@ -71,29 +89,10 @@ class EmployeeAssignmentSerializer(serializers.ModelSerializer):
                 employee=supervisor,
                 status='active'
             )
-            if self.instance:
-                active_assignments = active_assignments.exclude(id=self.instance.id)
             if active_assignments.exists():
                 raise serializers.ValidationError(
                     {"supervisor": "This employee is currently assigned as a worker and cannot be a supervisor"}
                 )
-        return data
-
-class AssignmentGroupSerializer(serializers.ModelSerializer):
-    employee_assignments = EmployeeAssignmentSerializer(many=True, read_only=True)
-    department_name = serializers.CharField(source='department.name', read_only=True)
-    field_name = serializers.CharField(source='field.name', read_only=True)
-    
-    class Meta:
-        model = AssignmentGroup
-        fields = ['id', 'name', 'field', 'field_name', 'department', 
-                 'department_name', 'created_date', 'end_date', 'notes', 
-                 'is_active', 'employee_assignments']
-        read_only_fields = ['created_date']
-
-    def validate(self, data):
-        if data.get('end_date') and data['end_date'] < data.get('created_date', timezone.now().date()):
-            raise serializers.ValidationError("End date cannot be before creation date")
         return data
 
 class AssignmentGroupDetailSerializer(AssignmentGroupSerializer):
