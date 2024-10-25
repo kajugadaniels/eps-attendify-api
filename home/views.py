@@ -946,7 +946,7 @@ class EndAssignmentView(APIView):
             )
 
 class AttendanceListCreateView(generics.ListCreateAPIView):
-    queryset = Attendance.objects.all()
+    queryset = Attendance.objects.all().order_by('-id')
     serializer_class = AttendanceSerializer
 
 class AttendanceRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
