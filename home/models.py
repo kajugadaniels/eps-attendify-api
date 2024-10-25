@@ -99,6 +99,7 @@ class Attendance(models.Model):
     date = models.DateField(default=timezone.now)
     attended = models.BooleanField(default=False)
     day_salary = models.CharField(max_length=255, null=True, blank=True)
+    is_supervisor = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
