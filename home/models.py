@@ -33,6 +33,7 @@ class AssignmentGroup(models.Model):
     name = models.CharField(max_length=100)
     field = models.ForeignKey(Field, on_delete=models.CASCADE, related_name="assignment_groups")
     department = models.ForeignKey(Department, on_delete=models.CASCADE, related_name="assignment_groups")
+    supervisor = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="supervised_groups", null=True)
     created_date = models.DateField(auto_now_add=True)
     end_date = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
@@ -44,6 +45,15 @@ class AssignmentGroup(models.Model):
     def clean(self):
         if self.end_date and self.end_date < self.created_date:
             raise ValidationError(_("End date cannot be before creation date"))
+        
+        # Prevent supervisor from being assigned as an employee in any active group
+        if self.supervisor:
+            supervisor_assignments = EmployeeAssignment.objects.filter(
+                employee=self.supervisor,
+                status='active'
+            )
+            if supervisor_assignments.exists():
+                raise ValidationError(_("Supervisor cannot be assigned as an employee"))
 
     class Meta:
         unique_together = ['name', 'field', 'department']
@@ -57,13 +67,12 @@ class EmployeeAssignment(models.Model):
 
     assignment_group = models.ForeignKey(AssignmentGroup, on_delete=models.CASCADE, related_name="employee_assignments")
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="assignments")
-    supervisor = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="supervised_assignments", null=True)
     assigned_date = models.DateField(auto_now_add=True)
     end_date = models.DateField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=ASSIGNMENT_STATUS, default='active')
 
     class Meta:
-        unique_together = ['assignment_group', 'employee']  # Prevent duplicate assignments
+        unique_together = ['assignment_group', 'employee']
 
     def __str__(self):
         return f"{self.employee.name} in {self.assignment_group.name}"
@@ -80,15 +89,6 @@ class EmployeeAssignment(models.Model):
             ).exclude(id=self.id)
             if active_assignments.exists():
                 raise ValidationError(_("Employee is already assigned to another active group"))
-        
-        # Prevent supervisor from being assigned as an employee
-        if self.supervisor:
-            supervisor_assignments = EmployeeAssignment.objects.filter(
-                employee=self.supervisor,
-                status='active'
-            ).exclude(id=self.id)
-            if supervisor_assignments.exists():
-                raise ValidationError(_("Supervisor cannot be assigned as an employee"))
 
 class Attendance(models.Model):
     employee_assignment = models.ForeignKey(
