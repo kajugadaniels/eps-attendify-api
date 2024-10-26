@@ -134,77 +134,68 @@ class AttendanceSerializer(serializers.ModelSerializer):
         read_only_fields = ['day_salary']
 
 class AttendanceMarkSerializer(serializers.Serializer):
-    tag_id = serializers.CharField(required=True)
+    tag_ids = serializers.ListField(
+        child=serializers.CharField(),
+        required=True,
+        allow_empty=False
+    )
     date = serializers.DateField(required=False, default=timezone.now().date())
-    
-    def validate_tag_id(self, value):
-        # First check if it's a supervisor
-        try:
-            AssignmentGroup.objects.get(
-                supervisor__tag_id=value,
-                is_active=True
-            )
-            return value
-        except AssignmentGroup.DoesNotExist:
-            # If not a supervisor, check if it's an employee
+
+    def validate_tag_ids(self, value):
+        if not value:
+            raise serializers.ValidationError("At least one tag_id is required.")
+        
+        # Validate each tag_id individually
+        for tag_id in value:
             try:
-                EmployeeAssignment.objects.get(
-                    employee__tag_id=value,
-                    status='active'
-                )
-                return value
-            except EmployeeAssignment.DoesNotExist:
-                raise serializers.ValidationError(
-                    "No active assignment found for this tag ID"
-                )
+                # Check if it's a supervisor
+                AssignmentGroup.objects.get(supervisor__tag_id=tag_id, is_active=True)
+            except AssignmentGroup.DoesNotExist:
+                # If not a supervisor, check if it's an employee
+                try:
+                    EmployeeAssignment.objects.get(employee__tag_id=tag_id, status='active')
+                except EmployeeAssignment.DoesNotExist:
+                    raise serializers.ValidationError(f"No active assignment found for tag ID {tag_id}")
+
+        return value
 
     def create(self, validated_data):
-        tag_id = validated_data.get('tag_id')
+        tag_ids = validated_data.get('tag_ids')
         date = validated_data.get('date')
+        attendance_records = []
 
-        # Try to get supervisor assignment first
-        try:
-            assignment_group = AssignmentGroup.objects.get(
-                supervisor__tag_id=tag_id,
-                is_active=True
-            )
-            # Create a special case for supervisor attendance
-            employee_assignment = EmployeeAssignment.objects.filter(
-                assignment_group=assignment_group
+        for tag_id in tag_ids:
+            # Determine if the tag ID is a supervisor or employee and get the respective assignment
+            try:
+                assignment_group = AssignmentGroup.objects.get(supervisor__tag_id=tag_id, is_active=True)
+                employee_assignment = EmployeeAssignment.objects.filter(assignment_group=assignment_group).first()
+                is_supervisor = True
+            except AssignmentGroup.DoesNotExist:
+                employee_assignment = EmployeeAssignment.objects.get(employee__tag_id=tag_id, status='active')
+                is_supervisor = False
+
+            # Check if attendance already exists for the date
+            existing_attendance = Attendance.objects.filter(
+                employee_assignment=employee_assignment,
+                date=date
             ).first()
-            is_supervisor = True
-        except AssignmentGroup.DoesNotExist:
-            # If not supervisor, get employee assignment
-            employee_assignment = EmployeeAssignment.objects.get(
-                employee__tag_id=tag_id,
-                status='active'
-            )
-            is_supervisor = False
 
-        # Check if attendance already exists
-        existing_attendance = Attendance.objects.filter(
-            employee_assignment=employee_assignment,
-            date=date
-        ).first()
+            if existing_attendance:
+                if existing_attendance.attended:
+                    raise serializers.ValidationError({
+                        "attendance": f"Attendance has already been marked for tag ID {tag_id} on this date."
+                    })
+                existing_attendance.attended = True
+                existing_attendance.save()
+                attendance_records.append(existing_attendance)
+            else:
+                # Create a new attendance record
+                attendance = Attendance.objects.create(
+                    employee_assignment=employee_assignment,
+                    date=date,
+                    attended=True,
+                    is_supervisor=is_supervisor
+                )
+                attendance_records.append(attendance)
 
-        if existing_attendance:
-            if existing_attendance.attended:
-                raise serializers.ValidationError({
-                    "attendance": "Attendance has already been marked for this date"
-                })
-            existing_attendance.attended = True
-            existing_attendance.save()
-            return existing_attendance
-
-        # Create new attendance record
-        attendance = Attendance.objects.create(
-            employee_assignment=employee_assignment,
-            date=date,
-            attended=True
-        )
-        
-        # Set is_supervisor flag
-        attendance.is_supervisor = is_supervisor
-        attendance.save()
-        
-        return attendance
+        return attendance_records
