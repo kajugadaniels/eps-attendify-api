@@ -527,7 +527,7 @@ class AssignmentListCreateView(APIView):
                     'employee_assignments',
                     filter=Q(employee_assignments__status='active')
                 )
-            ).order_by('-created_date')
+            ).order_by('-id')
 
             # Serialize the data with the detailed serializer
             serializer = AssignmentGroupDetailSerializer(assignments, many=True)
