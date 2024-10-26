@@ -113,6 +113,10 @@ class AssignmentGroupDetailSerializer(AssignmentGroupSerializer):
 class AttendanceSerializer(serializers.ModelSerializer):
     employee_id = serializers.CharField(source='employee_assignment.employee.id', read_only=True)
     employee_name = serializers.CharField(source='employee_assignment.employee.name', read_only=True)
+    department_id = serializers.CharField(
+        source='employee_assignment.assignment_group.department.id', 
+        read_only=True
+    )
     department_name = serializers.CharField(
         source='employee_assignment.assignment_group.department.name', 
         read_only=True
@@ -125,6 +129,7 @@ class AttendanceSerializer(serializers.ModelSerializer):
             'id', 
             'employee_id',
             'employee_name',
+            'department_id', 
             'department_name', 
             'date', 
             'attended',
