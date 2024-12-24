@@ -30,15 +30,11 @@ urlpatterns = [
     path('attendances/', AttendanceListCreateView.as_view(), name='getAttendanceListCreate'),
     path('attendance/<int:attendance_id>/', AttendanceRetrieveUpdateDestroyView.as_view(), name='attendanceRetrieveUpdateDestroy'),
     
-    # Mark attendance using tag_id
     path('mark-attendance/', MarkAttendanceView.as_view(), name='markAttendance'),
     
-    # Get today's attendance
     path('today-attendance/', TodayAttendanceView.as_view(), name='todayAttendance'),
     
-    # Get attendance by department
     path('department-attendance/<int:department_id>/', DepartmentAttendanceView.as_view(), name='departmentAttendance'),
     
-    # Get employee attendance history
     path('employee-attendance/<int:employee_id>/', EmployeeAttendanceHistoryView.as_view(), name='employeeAttendanceHistory'),
 ]  + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
