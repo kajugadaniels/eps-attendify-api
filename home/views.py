@@ -920,6 +920,114 @@ def deleteAssignment(request, assignment_id):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def endAssignment(request, assignment_id):
+    """
+    Function-based view to end an assignment group and all its employee assignments.
+    Only superusers or users with the 'Admin' role can end an assignment.
+    Expected payload:
+    {
+        "end_date": "YYYY-MM-DD",  # Optional, defaults to current date
+        "reason": "String"         # Optional, reason for ending the assignment
+    }
+    """
+    try:
+        if not (request.user.is_superuser or request.user.role == 'Admin'):
+            return Response(
+                {"error": "You do not have permission to end this assignment."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        assignment = AssignmentGroup.objects.filter(id=assignment_id).first()
+        if assignment is None:
+            return Response(
+                {"error": "Assignment not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        if not assignment.is_active:
+            return Response(
+                {"error": "This assignment has already been ended."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Get end date from request or default to current date
+        end_date_str = request.data.get('end_date')
+        if end_date_str:
+            try:
+                end_date = timezone.datetime.strptime(end_date_str, "%Y-%m-%d").date()
+            except ValueError:
+                return Response(
+                    {"error": "Invalid date format. Use YYYY-MM-DD"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        else:
+            end_date = timezone.now().date()
+
+        if end_date < assignment.created_date:
+            return Response(
+                {"error": "End date cannot be before the assignment start date."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        with transaction.atomic():
+            assignment.end_date = end_date
+            assignment.is_active = False
+
+            # Append reason to notes if provided
+            if 'reason' in request.data:
+                current_notes = assignment.notes or ""
+                timestamp = timezone.now().strftime("%Y-%m-%d %H:%M:%S")
+                new_note = f"\n[{timestamp}] Assignment ended - Reason: {request.data['reason']}"
+                assignment.notes = current_notes + new_note
+
+            try:
+                assignment.clean()
+                assignment.save()
+            except ValidationError as e:
+                return Response(
+                    {"error": str(e)},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            active_assignments = EmployeeAssignment.objects.filter(
+                assignment_group=assignment,
+                status='active'
+            )
+            for emp_assignment in active_assignments:
+                emp_assignment.end_date = end_date
+                emp_assignment.status = 'completed'
+                try:
+                    emp_assignment.clean()
+                except ValidationError as e:
+                    return Response(
+                        {"error": f"Error updating employee {emp_assignment.employee.name}: {str(e)}"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            if active_assignments:
+                EmployeeAssignment.objects.bulk_update(
+                    active_assignments,
+                    ['end_date', 'status']
+                )
+
+            updated_serializer = AssignmentGroupDetailSerializer(assignment)
+            response_data = {
+                "message": "Assignment ended successfully",
+                "end_date": end_date.strftime("%Y-%m-%d"),
+                "employees_updated": active_assignments.count(),
+                "assignment": updated_serializer.data
+            }
+            if 'reason' in request.data:
+                response_data["reason"] = request.data['reason']
+
+            return Response(response_data, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
 class AttendanceListCreateView(generics.ListCreateAPIView):
     queryset = Attendance.objects.all().order_by('-id')
     serializer_class = AttendanceSerializer
