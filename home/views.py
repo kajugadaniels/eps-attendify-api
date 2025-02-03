@@ -413,6 +413,37 @@ def getEmployees(request):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def createEmployee(request):
+    """
+    Function-based view to create a new employee.
+    Only superusers or users with the 'Admin' role can add a new employee.
+    """
+    try:
+        if not request.user.is_superuser and request.user.role != 'Admin':
+            return Response(
+                {"error": "You do not have permission to add a new employee."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        serializer = EmployeeSerializer(data=request.data)
+        if serializer.is_valid():
+            employee = serializer.save()
+            return Response({
+                "message": "Employee created successfully",
+                "employee": EmployeeSerializer(employee).data
+            }, status=status.HTTP_201_CREATED)
+        else:
+            return Response({
+                "message": "Employee creation failed",
+                "errors": serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
 class FieldListCreateView(APIView):
     """
     API view to list all fields with their roles or create a new field.
