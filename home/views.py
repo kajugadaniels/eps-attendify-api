@@ -970,3 +970,26 @@ def getAttendanceDetail(request, attendance_id):
     except Exception as e:
         return Response({"error": str(e)},
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def updateAttendance(request, attendance_id):
+    """
+    Function-based view to update a specific attendance record.
+    """
+    try:
+        attendance = Attendance.objects.filter(id=attendance_id).first()
+        if not attendance:
+            return Response({"error": "Attendance not found"},
+                            status=status.HTTP_404_NOT_FOUND)
+        serializer = AttendanceSerializer(attendance, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "message": "Attendance updated successfully",
+                "attendance": serializer.data
+            }, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({"error": str(e)},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
