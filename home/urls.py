@@ -11,8 +11,10 @@ urlpatterns = [
     path('remove-permission/', RemovePermissionView.as_view(), name='removePermission'),
     path('permissions/<int:user_id>/', UserPermissionsView.as_view(), name='userPermissions'),
 
-    path('users/', UserListView.as_view(), name='getUsers'),
-    path('user/<int:user_id>/', UserDetailView.as_view(), name='userDetail'),
+    path('users/', getUsers, name='getUsers'),
+    path('user/<int:user_id>/', getUserDetail, name='getUserDetail'),
+    path('user/<int:user_id>/update/', updateUser, name='updateUser'),
+    path('user/<int:user_id>/delete/', deleteUser, name='deleteUser'),
 
     path('departments/', DepartmentListCreateView.as_view(), name='getDepartmentListCreate'),
     path('department/<int:department_id>/', DepartmentRetrieveUpdateDestroyView.as_view(), name='departmentRetrieveUpdateDestroy'),
