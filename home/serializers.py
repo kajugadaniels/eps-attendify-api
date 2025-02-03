@@ -43,17 +43,6 @@ class EmployeeSerializer(serializers.ModelSerializer):
             'id', 'name', 'email', 'phone_number', 'address', 'tag_id', 'nid', 'rssb_number'
         )
 
-class EmployeeDetailSerializer(EmployeeSerializer):
-    attendance_history = serializers.SerializerMethodField()
-    
-    class Meta(EmployeeSerializer.Meta):
-        fields = EmployeeSerializer.Meta.fields + ['attendance_history']
-    
-    def get_attendance_history(self, obj):
-        # Retrieve attendances from all assignments for this employee
-        attendances = Attendance.objects.filter(employee_assignment__employee=obj).order_by('-date')
-        return AttendanceDetailSerializer(attendances, many=True).data
-
 class FieldSerializer(serializers.ModelSerializer):
     class Meta:
         model = Field
@@ -166,6 +155,28 @@ class AttendanceDetailSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at', 'employee_id', 'employee_name',
             'assignment_group', 'department_name', 'field_name'
         ]
+
+class EmployeeDetailSerializer(EmployeeSerializer):
+    attendance_history = serializers.SerializerMethodField()
+    
+    class Meta(EmployeeSerializer.Meta):
+        fields = EmployeeSerializer.Meta.fields + ['attendance_history']
+    
+    def get_attendance_history(self, obj):
+        # Retrieve attendances from all assignments for this employee
+        attendances = Attendance.objects.filter(employee_assignment__employee=obj).order_by('-date')
+        return AttendanceDetailSerializer(attendances, many=True).data
+
+class FieldDetailSerializer(FieldSerializer):
+    attendance_history = serializers.SerializerMethodField()
+    
+    class Meta(FieldSerializer.Meta):
+        fields = FieldSerializer.Meta.fields + ['attendance_history']
+    
+    def get_attendance_history(self, obj):
+        # Retrieve attendances from all assignment groups linked to this field
+        attendances = Attendance.objects.filter(employee_assignment__assignment_group__field=obj).order_by('-date')
+        return AttendanceDetailSerializer(attendances, many=True).data
 
 class AttendanceMarkSerializer(serializers.Serializer):
     tag_ids = serializers.ListField(
