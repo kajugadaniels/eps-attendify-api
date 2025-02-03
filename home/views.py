@@ -162,6 +162,27 @@ def getUsers(request):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def getUserDetail(request, user_id):
+    """
+    Function-based view to retrieve a user's details by ID.
+    """
+    try:
+        user = User.objects.filter(id=user_id).first()
+        if not user:
+            return Response(
+                {"error": "User not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        serializer = UserSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
 class DepartmentListCreateView(APIView):
     """
     API view to list all departments with their roles or create a new department.
