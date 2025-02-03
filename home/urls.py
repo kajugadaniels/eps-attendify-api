@@ -28,8 +28,11 @@ urlpatterns = [
     path('employee/<int:employee_id>/update/', updateEmployee, name='updateEmployee'),
     path('employee/<int:employee_id>/delete/', deleteEmployee, name='deleteEmployee'),
 
-    path('fields/', FieldListCreateView.as_view(), name='getFieldListCreate'),
-    path('field/<int:field_id>/', FieldRetrieveUpdateDestroyView.as_view(), name='fieldRetrieveUpdateDestroy'),
+    path('fields/', getFields, name='getFields'),
+    path('field/create/', createField, name='createField'),
+    path('field/<int:field_id>/', getFieldDetail, name='getFieldDetail'),
+    path('field/<int:field_id>/update/', updateField, name='updateField'),
+    path('field/<int:field_id>/delete/', deleteField, name='deleteField'),
 
     path('assignments/', AssignmentListCreateView.as_view(), name='getAssignmentListCreate'),
     path('assignment/<int:assignment_id>/', AssignmentRetrieveUpdateDestroyView.as_view(), name='assignmentRetrieveUpdateDestroy'),

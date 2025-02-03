@@ -666,463 +666,57 @@ def deleteField(request, field_id):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
-class AssignmentListCreateView(APIView):
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def getAssignments(request):
     """
-    API view to list all assignments or create a new assignment group.
-    Shows detailed information including all employees, field, and department details.
+    Function-based view to list all assignment groups with detailed information.
+    Only superusers or users with the 'Admin' role can view assignments.
+    Supports filtering by field, department, and is_active status.
     """
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        try:
-            # Check if the user is authorized
-            if not (request.user.is_superuser or request.user.role == 'Admin'):
-                return Response(
-                    {"error": "You do not have permission to view assignments."},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-
-            # Get query parameters for filtering
-            field_id = request.query_params.get('field')
-            department_id = request.query_params.get('department')
-            is_active = request.query_params.get('is_active')
-            
-            # Start with all assignment groups
-            assignments = AssignmentGroup.objects.all()
-            
-            # Apply filters if provided
-            if field_id:
-                assignments = assignments.filter(field_id=field_id)
-            if department_id:
-                assignments = assignments.filter(department_id=department_id)
-            if is_active is not None:
-                is_active = is_active.lower() == 'true'
-                assignments = assignments.filter(is_active=is_active)
-
-            # Annotate with employee counts
-            assignments = assignments.annotate(
-                total_employees=Count('employee_assignments'),
-                active_employees=Count(
-                    'employee_assignments',
-                    filter=Q(employee_assignments__status='active')
-                )
-            ).order_by('-id')
-
-            # Serialize the data with the detailed serializer
-            serializer = AssignmentGroupDetailSerializer(assignments, many=True)
-            
-            return Response({
-                "count": assignments.count(),
-                "results": serializer.data
-            }, status=status.HTTP_200_OK)
-
-        except Exception as e:
+    try:
+        if not (request.user.is_superuser or request.user.role == 'Admin'):
             return Response(
-                {"error": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": "You do not have permission to view assignments."},
+                status=status.HTTP_403_FORBIDDEN
             )
 
-    def post(self, request):
-        try:
-            # Check if user has permission to create assignments
-            if not (request.user.is_superuser or request.user.role == 'Admin'):
-                return Response(
-                    {"error": "You do not have permission to create assignments."},
-                    status=status.HTTP_403_FORBIDDEN
-                )
+        # Get query parameters for filtering
+        field_id = request.query_params.get('field')
+        department_id = request.query_params.get('department')
+        is_active = request.query_params.get('is_active')
 
-            # First, create the assignment group
-            group_serializer = AssignmentGroupSerializer(data=request.data)
-            if not group_serializer.is_valid():
-                return Response({
-                    "message": "Assignment group creation failed",
-                    "errors": group_serializer.errors
-                }, status=status.HTTP_400_BAD_REQUEST)
+        # Start with all assignment groups
+        assignments = AssignmentGroup.objects.all()
 
-            # Save the assignment group
-            assignment_group = group_serializer.save()
+        # Apply filters if provided
+        if field_id:
+            assignments = assignments.filter(field_id=field_id)
+        if department_id:
+            assignments = assignments.filter(department_id=department_id)
+        if is_active is not None:
+            is_active = is_active.lower() == 'true'
+            assignments = assignments.filter(is_active=is_active)
 
-            # If employees were provided, assign them to the group
-            employees = request.data.get('employees', [])
-            successful_assignments = []
-            failed_assignments = []
-
-            for employee_id in employees:
-                try:
-                    assignment = EmployeeAssignment.objects.create(
-                        assignment_group=assignment_group,
-                        employee_id=employee_id
-                    )
-                    successful_assignments.append(employee_id)
-                except Exception as e:
-                    failed_assignments.append({
-                        "employee_id": employee_id,
-                        "error": str(e)
-                    })
-
-            # Get the updated assignment group with all its details
-            updated_serializer = AssignmentGroupDetailSerializer(assignment_group)
-
-            response_data = {
-                "message": "Assignment group created successfully",
-                "assignment_group": updated_serializer.data,
-                "assignments_summary": {
-                    "successful_assignments": successful_assignments,
-                    "failed_assignments": failed_assignments
-                }
-            }
-
-            return Response(
-                response_data,
-                status=status.HTTP_201_CREATED if not failed_assignments else status.HTTP_207_MULTI_STATUS
+        # Annotate with employee counts
+        assignments = assignments.annotate(
+            total_employees=Count('employee_assignments'),
+            active_employees=Count(
+                'employee_assignments',
+                filter=Q(employee_assignments__status='active')
             )
+        ).order_by('-id')
 
-        except Exception as e:
-            # If the group was created but employee assignments failed, delete the group
-            if 'assignment_group' in locals():
-                assignment_group.delete()
-            
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
-class AssignmentRetrieveUpdateDestroyView(APIView):
-    """
-    API view to retrieve, update, or delete an assignment group by its ID.
-    Includes detailed information about all employees in the assignment.
-    """
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_object(self, assignment_id):
-        try:
-            return AssignmentGroup.objects.get(id=assignment_id)
-        except AssignmentGroup.DoesNotExist:
-            return None
-
-    def get(self, request, assignment_id):
-        """Retrieve detailed information about a specific assignment"""
-        try:
-            # Check permissions
-            if not (request.user.is_superuser or request.user.role == 'Admin'):
-                return Response(
-                    {"error": "You do not have permission to view this assignment."},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-
-            assignment = self.get_object(assignment_id)
-            if assignment is None:
-                return Response(
-                    {"error": "Assignment not found"},
-                    status=status.HTTP_404_NOT_FOUND
-                )
-
-            serializer = AssignmentGroupDetailSerializer(assignment)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-
-        except Exception as e:
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
-    @transaction.atomic
-    def put(self, request, assignment_id):
-        """Update an existing assignment group and its employee assignments"""
-        try:
-            # Check permissions
-            if not (request.user.is_superuser or request.user.role == 'Admin'):
-                return Response(
-                    {"error": "You do not have permission to update this assignment."},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-
-            assignment = self.get_object(assignment_id)
-            if assignment is None:
-                return Response(
-                    {"error": "Assignment not found"},
-                    status=status.HTTP_404_NOT_FOUND
-                )
-
-            # Create a transaction savepoint
-            with transaction.atomic():
-                # Update basic assignment group information
-                group_serializer = AssignmentGroupSerializer(
-                    assignment,
-                    data=request.data,
-                    partial=True
-                )
-                if not group_serializer.is_valid():
-                    return Response({
-                        "message": "Assignment update failed",
-                        "errors": group_serializer.errors
-                    }, status=status.HTTP_400_BAD_REQUEST)
-
-                assignment = group_serializer.save()
-
-                # Handle employee updates if provided
-                if 'employees' in request.data:
-                    new_employee_ids = set(request.data['employees'])
-                    current_employee_ids = set(
-                        assignment.employee_assignments.values_list('employee_id', flat=True)
-                    )
-
-                    # Remove employees not in the new list
-                    employees_to_remove = current_employee_ids - new_employee_ids
-                    if employees_to_remove:
-                        EmployeeAssignment.objects.filter(
-                            assignment_group=assignment,
-                            employee_id__in=employees_to_remove
-                        ).delete()
-
-                    # Add new employees
-                    employees_to_add = new_employee_ids - current_employee_ids
-                    for employee_id in employees_to_add:
-                        try:
-                            EmployeeAssignment.objects.create(
-                                assignment_group=assignment,
-                                employee_id=employee_id
-                            )
-                        except Exception as e:
-                            # Log the error but continue processing
-                            print(f"Error adding employee {employee_id}: {str(e)}")
-
-                # Get updated assignment data
-                updated_serializer = AssignmentGroupDetailSerializer(assignment)
-                return Response({
-                    "message": "Assignment updated successfully",
-                    "assignment": updated_serializer.data
-                }, status=status.HTTP_200_OK)
-
-        except Exception as e:
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
-    def delete(self, request, assignment_id):
-        """Delete an assignment group and all its employee assignments"""
-        try:
-            # Check permissions
-            if not (request.user.is_superuser or request.user.role == 'Admin'):
-                return Response(
-                    {"error": "You do not have permission to delete this assignment."},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-
-            assignment = self.get_object(assignment_id)
-            if assignment is None:
-                return Response(
-                    {"error": "Assignment not found"},
-                    status=status.HTTP_404_NOT_FOUND
-                )
-
-            # Store assignment details for response
-            assignment_details = AssignmentGroupDetailSerializer(assignment).data
-
-            # Delete the assignment (this will cascade delete all employee assignments)
-            assignment.delete()
-
-            return Response({
-                "message": "Assignment deleted successfully",
-                "deleted_assignment": assignment_details
-            }, status=status.HTTP_200_OK)
-
-        except Exception as e:
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
-class EndAssignmentView(APIView):
-    """
-    API view to end an assignment group and all its employee assignments.
-    Sets the same end date for both the group and all employee assignments.
-    """
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_object(self, assignment_id):
-        try:
-            return AssignmentGroup.objects.get(id=assignment_id)
-        except AssignmentGroup.DoesNotExist:
-            return None
-
-    @transaction.atomic
-    def post(self, request, assignment_id):
-        """
-        End an assignment group and all its employee assignments
-        
-        Expected payload:
-        {
-            "end_date": "YYYY-MM-DD",  # Optional, defaults to current date
-            "reason": "String",        # Optional, reason for ending the assignment
-        }
-        """
-        try:
-            # Check permissions
-            if not (request.user.is_superuser or request.user.role == 'Admin'):
-                return Response(
-                    {"error": "You do not have permission to end this assignment."},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-
-            # Get the assignment group
-            assignment = self.get_object(assignment_id)
-            if assignment is None:
-                return Response(
-                    {"error": "Assignment not found"},
-                    status=status.HTTP_404_NOT_FOUND
-                )
-
-            # Check if assignment is already ended
-            if not assignment.is_active:
-                return Response(
-                    {"error": "This assignment has already been ended."},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-            # Get end date from request or use current date
-            end_date = request.data.get('end_date')
-            if end_date:
-                try:
-                    end_date = timezone.datetime.strptime(end_date, "%Y-%m-%d").date()
-                except ValueError:
-                    return Response(
-                        {"error": "Invalid date format. Use YYYY-MM-DD"},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-            else:
-                end_date = timezone.now().date()
-
-            # Validate end date
-            if end_date < assignment.created_date:
-                return Response(
-                    {"error": "End date cannot be before the assignment start date."},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-            # Start atomic transaction
-            with transaction.atomic():
-                # Update assignment group
-                assignment.end_date = end_date
-                assignment.is_active = False
-                
-                # Add reason to notes if provided
-                if 'reason' in request.data:
-                    current_notes = assignment.notes or ""
-                    timestamp = timezone.now().strftime("%Y-%m-%d %H:%M:%S")
-                    new_note = f"\n[{timestamp}] Assignment ended - Reason: {request.data['reason']}"
-                    assignment.notes = current_notes + new_note
-                
-                try:
-                    assignment.clean()  # Run model validation
-                    assignment.save()
-                except ValidationError as e:
-                    return Response(
-                        {"error": str(e)},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-
-                # Update all active employee assignments
-                active_assignments = EmployeeAssignment.objects.filter(
-                    assignment_group=assignment,
-                    status='active'
-                )
-
-                # Prepare bulk update data
-                for emp_assignment in active_assignments:
-                    emp_assignment.end_date = end_date
-                    emp_assignment.status = 'completed'
-                    try:
-                        emp_assignment.clean()  # Run model validation
-                    except ValidationError as e:
-                        return Response(
-                            {"error": f"Error updating employee {emp_assignment.employee.name}: {str(e)}"},
-                            status=status.HTTP_400_BAD_REQUEST
-                        )
-
-                # Bulk update employee assignments
-                if active_assignments:
-                    EmployeeAssignment.objects.bulk_update(
-                        active_assignments,
-                        ['end_date', 'status']
-                    )
-
-                # Get updated assignment data
-                updated_serializer = AssignmentGroupDetailSerializer(assignment)
-
-                # Prepare response summary
-                response_data = {
-                    "message": "Assignment ended successfully",
-                    "end_date": end_date.strftime("%Y-%m-%d"),
-                    "employees_updated": active_assignments.count(),
-                    "assignment": updated_serializer.data
-                }
-
-                if 'reason' in request.data:
-                    response_data["reason"] = request.data['reason']
-
-                return Response(response_data, status=status.HTTP_200_OK)
-
-        except Exception as e:
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
-    def get(self, request, assignment_id):
-        """
-        Get information about whether an assignment can be ended
-        and any potential issues that need to be resolved
-        """
-        try:
-            # Check permissions
-            if not (request.user.is_superuser or request.user.role == 'Admin'):
-                return Response(
-                    {"error": "You do not have permission to view this information."},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-
-            assignment = self.get_object(assignment_id)
-            if assignment is None:
-                return Response(
-                    {"error": "Assignment not found"},
-                    status=status.HTTP_404_NOT_FOUND
-                )
-
-            # Get active employee assignments
-            active_assignments = EmployeeAssignment.objects.filter(
-                assignment_group=assignment,
-                status='active'
-            ).select_related('employee')
-
-            response_data = {
-                "can_end": assignment.is_active,
-                "is_active": assignment.is_active,
-                "active_employees": active_assignments.count(),
-                "active_employee_list": [
-                    {
-                        "id": assign.employee.id,
-                        "name": assign.employee.name,
-                        "assignment_date": assign.assigned_date.strftime("%Y-%m-%d")
-                    }
-                    for assign in active_assignments
-                ],
-                "start_date": assignment.created_date.strftime("%Y-%m-%d"),
-                "current_status": "Active" if assignment.is_active else "Ended",
-                "notes": assignment.notes
-            }
-
-            if not assignment.is_active:
-                response_data["end_date"] = assignment.end_date.strftime("%Y-%m-%d") if assignment.end_date else None
-
-            return Response(response_data, status=status.HTTP_200_OK)
-
-        except Exception as e:
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+        serializer = AssignmentGroupDetailSerializer(assignments, many=True)
+        return Response({
+            "count": assignments.count(),
+            "results": serializer.data
+        }, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 class AttendanceListCreateView(generics.ListCreateAPIView):
     queryset = Attendance.objects.all().order_by('-id')
