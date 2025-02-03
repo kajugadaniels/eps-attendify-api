@@ -616,21 +616,38 @@ def createField(request):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def getFieldDetail(request, field_id):
     """
-    Function-based view to retrieve details of a specific field by ID.
+    Function-based view to retrieve details of a specific field by ID,
+    along with its attendance history.
     """
     try:
+        # Retrieve the field by ID
         field = Field.objects.filter(id=field_id).first()
         if not field:
             return Response(
                 {"error": "Field not found"},
                 status=status.HTTP_404_NOT_FOUND
             )
-        serializer = FieldSerializer(field)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+
+        # Serialize the field details
+        field_serializer = FieldSerializer(field)
+
+        # Retrieve the attendance history for the field by filtering through assignment groups
+        attendance_history = Attendance.objects.filter(
+            employee_assignment__assignment_group__field=field
+        ).order_by('-date')
+        attendance_serializer = AttendanceSerializer(attendance_history, many=True)
+
+        # Combine the field details and attendance history in the response
+        return Response({
+            "field": field_serializer.data,
+            "attendance_history": attendance_serializer.data
+        }, status=status.HTTP_200_OK)
+
     except Exception as e:
         return Response(
             {"error": str(e)},
