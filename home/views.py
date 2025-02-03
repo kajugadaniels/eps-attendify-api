@@ -954,3 +954,19 @@ def createAttendance(request):
         return Response({"error": str(e)},
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def getAttendanceDetail(request, attendance_id):
+    """
+    Function-based view to retrieve detailed information of a specific attendance record.
+    """
+    try:
+        attendance = Attendance.objects.filter(id=attendance_id).first()
+        if not attendance:
+            return Response({"error": "Attendance not found"},
+                            status=status.HTTP_404_NOT_FOUND)
+        serializer = AttendanceSerializer(attendance)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"error": str(e)},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
