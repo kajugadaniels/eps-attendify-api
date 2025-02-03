@@ -444,6 +444,27 @@ def createEmployee(request):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def getEmployeeDetail(request, employee_id):
+    """
+    Function-based view to retrieve details of a specific employee by ID.
+    """
+    try:
+        employee = Employee.objects.filter(id=employee_id).first()
+        if not employee:
+            return Response(
+                {"error": "Employee not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        serializer = EmployeeSerializer(employee)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
 class FieldListCreateView(APIView):
     """
     API view to list all fields with their roles or create a new field.
