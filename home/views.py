@@ -3,11 +3,11 @@ from django.db import transaction
 from django.db.models import Count, Q
 from rest_framework.views import APIView
 from rest_framework import viewsets, status
-from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.core.exceptions import PermissionDenied
 from rest_framework import generics, permissions, status
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.decorators import api_view, permission_classes
 
 class PermissionListView(generics.ListAPIView):
     """
@@ -15,7 +15,7 @@ class PermissionListView(generics.ListAPIView):
     """
     queryset = Permission.objects.all()
     serializer_class = PermissionSerializer
-    permission_classes = [permissions.IsAuthenticated] # Change to ensure only authenticated users can access
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         # Allow superusers unrestricted access
