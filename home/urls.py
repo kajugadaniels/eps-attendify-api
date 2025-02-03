@@ -40,8 +40,10 @@ urlpatterns = [
     path('assignment/<int:assignment_id>/update/', updateAssignment, name='updateAssignment'),
     path('assignment/<int:assignment_id>/delete/', deleteAssignment, name='deleteAssignment'),
 
-    path('attendances/', AttendanceListCreateView.as_view(), name='getAttendanceListCreate'),
-    path('attendance/<int:attendance_id>/', AttendanceRetrieveUpdateDestroyView.as_view(), name='attendanceRetrieveUpdateDestroy'),
-    
-    path('mark-attendance/', MarkAttendanceView.as_view(), name='markAttendance'),
+    path('attendances/', getAttendances, name='getAttendances'),
+    path('attendance/create/', createAttendance, name='createAttendance'),
+    path('attendance/<int:attendance_id>/', getAttendanceDetail, name='getAttendanceDetail'),
+    path('attendance/<int:attendance_id>/update/', updateAttendance, name='updateAttendance'),
+    path('attendance/<int:attendance_id>/delete/', deleteAttendance, name='deleteAttendance'),
+    path('mark-attendance/', markAttendance, name='markAttendance'),
 ]  + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
