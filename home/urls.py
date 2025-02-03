@@ -39,8 +39,6 @@ urlpatterns = [
     path('assignment/<int:assignment_id>/', getAssignmentDetail, name='getAssignmentDetail'),
     path('assignment/<int:assignment_id>/update/', updateAssignment, name='updateAssignment'),
     path('assignment/<int:assignment_id>/delete/', deleteAssignment, name='deleteAssignment'),
-    path('assignment/<int:assignment_id>/end/', endAssignment, name='endAssignment'),
-    path('assignment/<int:assignment_id>/end-info/', getAssignmentEndInfo, name='getAssignmentEndInfo'),
 
     path('attendances/', AttendanceListCreateView.as_view(), name='getAttendanceListCreate'),
     path('attendance/<int:attendance_id>/', AttendanceRetrieveUpdateDestroyView.as_view(), name='attendanceRetrieveUpdateDestroy'),
