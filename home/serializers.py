@@ -178,6 +178,17 @@ class FieldDetailSerializer(FieldSerializer):
         attendances = Attendance.objects.filter(employee_assignment__assignment_group__field=obj).order_by('-date')
         return AttendanceDetailSerializer(attendances, many=True).data
 
+class DepartmentDetailSerializer(DepartmentSerializer):
+    attendance_history = serializers.SerializerMethodField()
+    
+    class Meta(DepartmentSerializer.Meta):
+        fields = DepartmentSerializer.Meta.fields + ['attendance_history']
+    
+    def get_attendance_history(self, obj):
+        # Retrieve attendances from all assignment groups linked to this department
+        attendances = Attendance.objects.filter(employee_assignment__assignment_group__department=obj).order_by('-date')
+        return AttendanceDetailSerializer(attendances, many=True).data
+
 class AttendanceMarkSerializer(serializers.Serializer):
     tag_ids = serializers.ListField(
         child=serializers.CharField(),
