@@ -1012,3 +1012,26 @@ def deleteAttendance(request, attendance_id):
         return Response({"error": str(e)},
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@authentication_classes([])
+def markAttendance(request):
+    """
+    Function-based view to mark attendance for a list of tag IDs.
+    Processes each tag ID to determine if it belongs to a supervisor or an employee,
+    marks the attendance accordingly, and returns detailed information for each record.
+    """
+    serializer = AttendanceMarkSerializer(data=request.data)
+    if serializer.is_valid():
+        try:
+            # Save and retrieve a list of attendance records
+            attendance_records = serializer.save()
+            detailed_data = AttendanceSerializer(attendance_records, many=True).data
+            return Response({
+                "message": "Attendance marked successfully",
+                "attendances": detailed_data
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)},
+                            status=status.HTTP_400_BAD_REQUEST)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
