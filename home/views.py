@@ -948,27 +948,3 @@ class MarkAttendanceView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-class TodayAttendanceView(generics.ListAPIView):
-    serializer_class = AttendanceSerializer
-
-    def get_queryset(self):
-        return Attendance.objects.filter(date=timezone.now().date())
-
-class DepartmentAttendanceView(generics.ListAPIView):
-    serializer_class = AttendanceSerializer
-
-    def get_queryset(self):
-        department_id = self.kwargs['department_id']
-        return Attendance.objects.filter(
-            employee_assignment__assignment_group__department_id=department_id
-        )
-
-class EmployeeAttendanceHistoryView(generics.ListAPIView):
-    serializer_class = AttendanceSerializer
-
-    def get_queryset(self):
-        employee_id = self.kwargs['employee_id']
-        return Attendance.objects.filter(
-            employee_assignment__employee_id=employee_id
-        ).order_by('-date')

@@ -44,10 +44,4 @@ urlpatterns = [
     path('attendance/<int:attendance_id>/', AttendanceRetrieveUpdateDestroyView.as_view(), name='attendanceRetrieveUpdateDestroy'),
     
     path('mark-attendance/', MarkAttendanceView.as_view(), name='markAttendance'),
-    
-    path('today-attendance/', TodayAttendanceView.as_view(), name='todayAttendance'),
-    
-    path('department-attendance/<int:department_id>/', DepartmentAttendanceView.as_view(), name='departmentAttendance'),
-    
-    path('employee-attendance/<int:employee_id>/', EmployeeAttendanceHistoryView.as_view(), name='employeeAttendanceHistory'),
 ]  + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
