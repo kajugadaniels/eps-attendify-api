@@ -327,6 +327,39 @@ def getDepartmentDetail(request, department_id):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def updateDepartment(request, department_id):
+    """
+    Function-based view to update details of a specific department.
+    Only superusers can update a department.
+    """
+    try:
+        department = Department.objects.filter(id=department_id).first()
+        if not department:
+            return Response(
+                {"error": "Department not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        if not request.user.is_superuser:
+            return Response(
+                {"error": "You do not have permission to update this department."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        serializer = DepartmentSerializer(department, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "message": "Department updated successfully",
+                "department": serializer.data
+            }, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
 class EmployeeListCreateView(APIView):
     """
     API view to list all employees with their roles or create a new empployee.
