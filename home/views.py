@@ -839,16 +839,19 @@ def createAssignment(request):
 @permission_classes([IsAuthenticated])
 def getAssignmentDetail(request, assignment_id):
     """
-    Function-based view to retrieve detailed information about a specific assignment group.
+    Function-based view to retrieve detailed information about a specific assignment group,
+    along with its attendance history.
     Only superusers or users with the 'Admin' role can view assignment details.
     """
     try:
+        # Permission check: only superusers or Admin role can view the assignment details
         if not (request.user.is_superuser or request.user.role == 'Admin'):
             return Response(
                 {"error": "You do not have permission to view this assignment."},
                 status=status.HTTP_403_FORBIDDEN
             )
 
+        # Retrieve the assignment group by ID
         assignment = AssignmentGroup.objects.filter(id=assignment_id).first()
         if assignment is None:
             return Response(
@@ -856,8 +859,18 @@ def getAssignmentDetail(request, assignment_id):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        serializer = AssignmentGroupDetailSerializer(assignment)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        # Serialize the assignment details
+        assignment_serializer = AssignmentGroupDetailSerializer(assignment)
+        assignment_data = assignment_serializer.data
+
+        # Retrieve the attendance history for this assignment group
+        attendance_records = Attendance.objects.filter(
+            employee_assignment__assignment_group=assignment
+        ).order_by('-date')
+        attendance_serializer = AttendanceSerializer(attendance_records, many=True)
+        assignment_data['attendance_history'] = attendance_serializer.data
+
+        return Response(assignment_data, status=status.HTTP_200_OK)
     except Exception as e:
         return Response(
             {"error": str(e)},
