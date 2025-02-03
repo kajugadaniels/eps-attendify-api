@@ -141,6 +141,21 @@ class AttendanceSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['day_salary']
 
+class AttendanceDetailSerializer(serializers.ModelSerializer):
+    employee_id = serializers.IntegerField(source='employee_assignment.employee.id', read_only=True)
+    employee_name = serializers.CharField(source='employee_assignment.employee.name', read_only=True)
+    assignment_group = serializers.CharField(source='employee_assignment.assignment_group.name', read_only=True)
+    department_name = serializers.CharField(source='employee_assignment.assignment_group.department.name', read_only=True)
+    field_name = serializers.CharField(source='employee_assignment.assignment_group.field.name', read_only=True)
+    
+    class Meta:
+        model = Attendance
+        fields = [
+            'id', 'date', 'attended', 'day_salary', 'is_supervisor',
+            'created_at', 'updated_at', 'employee_id', 'employee_name',
+            'assignment_group', 'department_name', 'field_name'
+        ]
+
 class AttendanceMarkSerializer(serializers.Serializer):
     tag_ids = serializers.ListField(
         child=serializers.CharField(),
