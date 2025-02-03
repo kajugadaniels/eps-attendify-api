@@ -955,24 +955,37 @@ class AttendanceRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView)
     lookup_url_kwarg = 'attendance_id'
 
 class MarkAttendanceView(APIView):
-    permission_classes = [AllowAny]  # Allow any user to access this view
+    permission_classes = [AllowAny]  # No authentication required
     authentication_classes = []      # No authentication required
     
     def post(self, request):
         serializer = AttendanceMarkSerializer(data=request.data)
         if serializer.is_valid():
             try:
-                attendance = serializer.save()
-                return Response(
-                    AttendanceSerializer(attendance).data,
-                    status=status.HTTP_200_OK
-                )
+                attendance_records = serializer.save()
+                results = []
+                for attendance in attendance_records:
+                    employee = attendance.employee_assignment.employee
+                    employee_data = EmployeeDetailSerializer(employee).data
+                    results.append({
+                        "message": f"Attendance marked successfully for {employee.name}.",
+                        "employee_details": employee_data,
+                        "attendance_record": AttendanceSerializer(attendance).data,
+                    })
+                return Response({
+                    "message": "Attendance marked successfully.",
+                    "results": results
+                }, status=status.HTTP_200_OK)
             except Exception as e:
-                return Response(
-                    {"error": str(e)},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                return Response({
+                    "error": "Failed to mark attendance.",
+                    "details": str(e)
+                }, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({
+                "error": "Invalid data.",
+                "details": serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
 
 class TodayAttendanceView(generics.ListAPIView):
     serializer_class = AttendanceSerializer
