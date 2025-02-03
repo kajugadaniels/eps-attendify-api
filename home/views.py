@@ -138,75 +138,29 @@ class UserPermissionsView(APIView):
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-class UserListView(APIView):
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def getUsers(request):
     """
-    API view to list all users with their roles.
-    Only superusers and users with the 'Admin' role can view users.
+    Function-based view to list all users with their roles.
+    Only superusers can view all users.
     """
-    permission_classes = [IsAuthenticated]  # Allow access to authenticated users
+    try:
+        if request.user.is_superuser:
+            users = User.objects.all().order_by('-id')
+        else:
+            return Response(
+                {"error": "You do not have permission to view this resource."},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
-    def get(self, request):
-        try:
-            # Check if the user is a superuser or has the role of 'Admin'
-            if request.user.is_superuser:
-                users = User.objects.all().order_by('-id')
-            else:
-                # If the user is not authorized, return a forbidden response
-                return Response({"error": "You do not have permission to view this resource."},
-                                status=status.HTTP_403_FORBIDDEN)
-
-            # Serialize user data with roles
-            serializer = UserSerializer(users, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-class UserDetailView(APIView):
-    """
-    API view to retrieve, update, or delete a user's details by their ID.
-    """
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_object(self, user_id):
-        try:
-            return User.objects.get(id=user_id)
-        except User.DoesNotExist:
-            return None
-
-    def get(self, request, user_id):
-        user = self.get_object(user_id)
-        if user is None:
-            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-        serializer = UserSerializer(user)
+        serializer = UserSerializer(users, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
-
-    def put(self, request, user_id):
-        user = self.get_object(user_id)
-        if user is None:
-            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-
-        # Permission check: Only superusers or the user themselves can update
-        if not request.user.is_superuser and request.user.id != user.id:
-            return Response({"error": "You do not have permission to edit this user."}, status=status.HTTP_403_FORBIDDEN)
-
-        serializer = UserSerializer(user, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response({"message": "User updated successfully", "user": serializer.data}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self, request, user_id):
-        user = self.get_object(user_id)
-        if user is None:
-            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-
-        # Permission check: Only superusers or users with specific permission can delete
-        if not request.user.is_superuser:
-            return Response({"error": "You do not have permission to delete this user."}, status=status.HTTP_403_FORBIDDEN)
-
-        # Deleting the user
-        user.delete()
-        return Response({"message": "User deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+    except Exception as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 class DepartmentListCreateView(APIView):
     """
