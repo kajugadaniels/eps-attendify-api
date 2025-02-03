@@ -252,98 +252,28 @@ def deleteUser(request, user_id):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
-class DepartmentListCreateView(APIView):
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def getDepartments(request):
     """
-    API view to list all departments with their roles or create a new department.
-    Only superuser and departments with the 'Admin' role can view or add departments.
+    Function-based view to list all departments.
+    Only superusers or users with the 'Admin' role can view departments.
     """
-    permission_classes = [IsAuthenticated]  # Allow access to authenticated departments
-
-    def get(self, request):
-        try:
-            # Check if the department is a superuser or has the role of 'Admin'
-            if request.user.is_superuser or request.user.role == 'Admin':
-                departments = Department.objects.all().order_by('-id')
-            else:
-                # If the department is not authorized, return a forbidden response
-                return Response({"error": "You do not have permission to view this resource."},
-                                status=status.HTTP_403_FORBIDDEN)
-
-            # Serialize department data with roles
-            serializer = DepartmentSerializer(departments, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    def post(self, request):
-        try:
-            # Only superuser and departments with the 'Admin' role can create new departments
-            if not request.user.is_superuser and request.user.role != 'Admin':
-                return Response({"error": "You do not have permission to add a new department."},
-                                status=status.HTTP_403_FORBIDDEN)
-
-            # Use the DepartmentSerializer to validate and create a new department
-            serializer = DepartmentSerializer(data=request.data)
-            if serializer.is_valid():
-                department = serializer.save()
-                return Response({
-                    "message": "Department created successfully",
-                    "department": DepartmentSerializer(department).data
-                }, status=status.HTTP_201_CREATED)
-            else:
-                return Response({
-                    "message": "Department creation failed",
-                    "errors": serializer.errors
-                }, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-class DepartmentRetrieveUpdateDestroyView(APIView):
-    """
-    API view to retrieve, update, or delete a department's details by their ID.
-    """
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_object(self, department_id):
-        try:
-            return Department.objects.get(id=department_id)
-        except Department.DoesNotExist:
-            return None
-
-    def get(self, request, department_id):
-        department = self.get_object(department_id)
-        if department is None:
-            return Response({"error": "Department not found"}, status=status.HTTP_404_NOT_FOUND)
-        serializer = DepartmentSerializer(department)
+    try:
+        if request.user.is_superuser or request.user.role == 'Admin':
+            departments = Department.objects.all().order_by('-id')
+        else:
+            return Response(
+                {"error": "You do not have permission to view this resource."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        serializer = DepartmentSerializer(departments, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
-
-    def put(self, request, department_id):
-        department = self.get_object(department_id)
-        if department is None:
-            return Response({"error": "Department not found"}, status=status.HTTP_404_NOT_FOUND)
-
-        # Permission check: Only superusers or the user themselves can update
-        if not request.user.is_superuser:
-            return Response({"error": "You do not have permission to update this department."}, status=status.HTTP_403_FORBIDDEN)
-
-        serializer = DepartmentSerializer(department, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response({"message": "Department updated successfully", "user": serializer.data}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self, request, department_id):
-        department = self.get_object(department_id)
-        if department is None:
-            return Response({"error": "Department not found"}, status=status.HTTP_404_NOT_FOUND)
-
-        # Permission check: Only superusers or users with specific permission can delete
-        if not request.user.is_superuser:
-            return Response({"error": "You do not have permission to delete this user."}, status=status.HTTP_403_FORBIDDEN)
-
-        # Deleting the department
-        department.delete()
-        return Response({"message": "Department deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+    except Exception as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 class EmployeeListCreateView(APIView):
     """
