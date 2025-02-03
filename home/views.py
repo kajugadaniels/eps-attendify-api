@@ -603,6 +603,39 @@ def getFieldDetail(request, field_id):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def updateField(request, field_id):
+    """
+    Function-based view to update details of a specific field.
+    Only superusers can update a field.
+    """
+    try:
+        field = Field.objects.filter(id=field_id).first()
+        if not field:
+            return Response(
+                {"error": "Field not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        if not request.user.is_superuser:
+            return Response(
+                {"error": "You do not have permission to update this field."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        serializer = FieldSerializer(field, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "message": "Field updated successfully",
+                "field": serializer.data
+            }, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
 class AssignmentListCreateView(APIView):
     """
     API view to list all assignments or create a new assignment group.
