@@ -582,6 +582,27 @@ def createField(request):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def getFieldDetail(request, field_id):
+    """
+    Function-based view to retrieve details of a specific field by ID.
+    """
+    try:
+        field = Field.objects.filter(id=field_id).first()
+        if not field:
+            return Response(
+                {"error": "Field not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        serializer = FieldSerializer(field)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
 class AssignmentListCreateView(APIView):
     """
     API view to list all assignments or create a new assignment group.
