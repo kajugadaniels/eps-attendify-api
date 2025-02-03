@@ -784,7 +784,34 @@ def createAssignment(request):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def getAssignmentDetail(request, assignment_id):
+    """
+    Function-based view to retrieve detailed information about a specific assignment group.
+    Only superusers or users with the 'Admin' role can view assignment details.
+    """
+    try:
+        if not (request.user.is_superuser or request.user.role == 'Admin'):
+            return Response(
+                {"error": "You do not have permission to view this assignment."},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
+        assignment = AssignmentGroup.objects.filter(id=assignment_id).first()
+        if assignment is None:
+            return Response(
+                {"error": "Assignment not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = AssignmentGroupDetailSerializer(assignment)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 class AttendanceListCreateView(generics.ListCreateAPIView):
     queryset = Attendance.objects.all().order_by('-id')
