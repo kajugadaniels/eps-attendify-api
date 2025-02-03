@@ -934,3 +934,23 @@ def getAttendances(request):
     except Exception as e:
         return Response({"error": str(e)},
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def createAttendance(request):
+    """
+    Function-based view to create a new attendance record.
+    """
+    try:
+        serializer = AttendanceSerializer(data=request.data)
+        if serializer.is_valid():
+            attendance = serializer.save()
+            return Response({
+                "message": "Attendance created successfully",
+                "attendance": AttendanceSerializer(attendance).data
+            }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({"error": str(e)},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
