@@ -528,98 +528,28 @@ def deleteEmployee(request, employee_id):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
-class FieldListCreateView(APIView):
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def getFields(request):
     """
-    API view to list all fields with their roles or create a new field.
-    Only superuser and fields with the 'Admin' role can view or add fields.
+    Function-based view to list all fields.
+    Only superusers or users with the 'Admin' role can view fields.
     """
-    permission_classes = [IsAuthenticated]  # Allow access to authenticated fields
-
-    def get(self, request):
-        try:
-            # Check if the field is a superuser or has the role of 'Admin'
-            if request.user.is_superuser or request.user.role == 'Admin':
-                fields = Field.objects.all().order_by('-id')
-            else:
-                # If the field is not authorized, return a forbidden response
-                return Response({"error": "You do not have permission to view this resource."},
-                                status=status.HTTP_403_FORBIDDEN)
-
-            # Serialize field data with roles
-            serializer = FieldSerializer(fields, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    def post(self, request):
-        try:
-            # Only superuser and fields with the 'Admin' role can create new fields
-            if not request.user.is_superuser and request.user.role != 'Admin':
-                return Response({"error": "You do not have permission to add a new field."},
-                                status=status.HTTP_403_FORBIDDEN)
-
-            # Use the FieldSerializer to validate and create a new field
-            serializer = FieldSerializer(data=request.data)
-            if serializer.is_valid():
-                field = serializer.save()
-                return Response({
-                    "message": "Field created successfully",
-                    "field": FieldSerializer(field).data
-                }, status=status.HTTP_201_CREATED)
-            else:
-                return Response({
-                    "message": "Field creation failed",
-                    "errors": serializer.errors
-                }, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-class FieldRetrieveUpdateDestroyView(APIView):
-    """
-    API view to retrieve, update, or delete a field's details by their ID.
-    """
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_object(self, field_id):
-        try:
-            return Field.objects.get(id=field_id)
-        except Field.DoesNotExist:
-            return None
-
-    def get(self, request, field_id):
-        field = self.get_object(field_id)
-        if field is None:
-            return Response({"error": "Field not found"}, status=status.HTTP_404_NOT_FOUND)
-        serializer = FieldSerializer(field)
+    try:
+        if request.user.is_superuser or request.user.role == 'Admin':
+            fields = Field.objects.all().order_by('-id')
+        else:
+            return Response(
+                {"error": "You do not have permission to view this resource."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        serializer = FieldSerializer(fields, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
-
-    def put(self, request, field_id):
-        field = self.get_object(field_id)
-        if field is None:
-            return Response({"error": "Field not found"}, status=status.HTTP_404_NOT_FOUND)
-
-        # Permission check: Only superusers or the user themselves can update
-        if not request.user.is_superuser:
-            return Response({"error": "You do not have permission to update this field."}, status=status.HTTP_403_FORBIDDEN)
-
-        serializer = FieldSerializer(field, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response({"message": "Field updated successfully", "user": serializer.data}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self, request, field_id):
-        field = self.get_object(field_id)
-        if field is None:
-            return Response({"error": "Field not found"}, status=status.HTTP_404_NOT_FOUND)
-
-        # Permission check: Only superusers or users with specific permission can delete
-        if not request.user.is_superuser:
-            return Response({"error": "You do not have permission to delete this field."}, status=status.HTTP_403_FORBIDDEN)
-
-        # Deleting the user
-        field.delete()
-        return Response({"message": "Field deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+    except Exception as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 class AssignmentListCreateView(APIView):
     """

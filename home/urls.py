@@ -17,16 +17,16 @@ urlpatterns = [
     path('user/<int:user_id>/delete/', deleteUser, name='deleteUser'),
 
     path('departments/', getDepartments, name='getDepartments'),
-    path('departments/create/', createDepartment, name='createDepartment'),
+    path('department/create/', createDepartment, name='createDepartment'),
     path('department/<int:department_id>/', getDepartmentDetail, name='getDepartmentDetail'),
     path('department/<int:department_id>/update/', updateDepartment, name='updateDepartment'),
     path('department/<int:department_id>/delete/', deleteDepartment, name='deleteDepartment'),
 
-    path('employees/', views.getEmployees, name='getEmployees'),
-    path('employees/create/', views.createEmployee, name='createEmployee'),
-    path('employee/<int:employee_id>/', views.getEmployeeDetail, name='getEmployeeDetail'),
-    path('employee/<int:employee_id>/update/', views.updateEmployee, name='updateEmployee'),
-    path('employee/<int:employee_id>/delete/', views.deleteEmployee, name='deleteEmployee'),
+    path('employees/', getEmployees, name='getEmployees'),
+    path('employee/create/', createEmployee, name='createEmployee'),
+    path('employee/<int:employee_id>/', getEmployeeDetail, name='getEmployeeDetail'),
+    path('employee/<int:employee_id>/update/', updateEmployee, name='updateEmployee'),
+    path('employee/<int:employee_id>/delete/', deleteEmployee, name='deleteEmployee'),
 
     path('fields/', FieldListCreateView.as_view(), name='getFieldListCreate'),
     path('field/<int:field_id>/', FieldRetrieveUpdateDestroyView.as_view(), name='fieldRetrieveUpdateDestroy'),
