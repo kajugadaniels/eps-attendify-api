@@ -22,8 +22,11 @@ urlpatterns = [
     path('department/<int:department_id>/update/', updateDepartment, name='updateDepartment'),
     path('department/<int:department_id>/delete/', deleteDepartment, name='deleteDepartment'),
 
-    path('employees/', EmployeeListCreateView.as_view(), name='getEmployeeListCreate'),
-    path('employee/<int:employee_id>/', EmployeeRetrieveUpdateDestroyView.as_view(), name='employeeRetrieveUpdateDestroy'),
+    path('employees/', views.getEmployees, name='getEmployees'),
+    path('employees/create/', views.createEmployee, name='createEmployee'),
+    path('employee/<int:employee_id>/', views.getEmployeeDetail, name='getEmployeeDetail'),
+    path('employee/<int:employee_id>/update/', views.updateEmployee, name='updateEmployee'),
+    path('employee/<int:employee_id>/delete/', views.deleteEmployee, name='deleteEmployee'),
 
     path('fields/', FieldListCreateView.as_view(), name='getFieldListCreate'),
     path('field/<int:field_id>/', FieldRetrieveUpdateDestroyView.as_view(), name='fieldRetrieveUpdateDestroy'),
