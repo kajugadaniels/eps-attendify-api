@@ -551,6 +551,37 @@ def getFields(request):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def createField(request):
+    """
+    Function-based view to create a new field.
+    Only superusers or users with the 'Admin' role can add a new field.
+    """
+    try:
+        if not request.user.is_superuser and request.user.role != 'Admin':
+            return Response(
+                {"error": "You do not have permission to add a new field."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        serializer = FieldSerializer(data=request.data)
+        if serializer.is_valid():
+            field = serializer.save()
+            return Response({
+                "message": "Field created successfully",
+                "field": FieldSerializer(field).data
+            }, status=status.HTTP_201_CREATED)
+        else:
+            return Response({
+                "message": "Field creation failed",
+                "errors": serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
 class AssignmentListCreateView(APIView):
     """
     API view to list all assignments or create a new assignment group.
