@@ -16,8 +16,11 @@ urlpatterns = [
     path('user/<int:user_id>/update/', updateUser, name='updateUser'),
     path('user/<int:user_id>/delete/', deleteUser, name='deleteUser'),
 
-    path('departments/', DepartmentListCreateView.as_view(), name='getDepartmentListCreate'),
-    path('department/<int:department_id>/', DepartmentRetrieveUpdateDestroyView.as_view(), name='departmentRetrieveUpdateDestroy'),
+    path('departments/', getDepartments, name='getDepartments'),
+    path('departments/create/', createDepartment, name='createDepartment'),
+    path('department/<int:department_id>/', getDepartmentDetail, name='getDepartmentDetail'),
+    path('department/<int:department_id>/update/', updateDepartment, name='updateDepartment'),
+    path('department/<int:department_id>/delete/', deleteDepartment, name='deleteDepartment'),
 
     path('employees/', EmployeeListCreateView.as_view(), name='getEmployeeListCreate'),
     path('employee/<int:employee_id>/', EmployeeRetrieveUpdateDestroyView.as_view(), name='employeeRetrieveUpdateDestroy'),
