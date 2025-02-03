@@ -306,21 +306,38 @@ def createDepartment(request):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def getDepartmentDetail(request, department_id):
     """
-    Function-based view to retrieve details of a specific department by ID.
+    Function-based view to retrieve details of a specific department by ID,
+    along with its attendance history.
     """
     try:
+        # Retrieve the department by ID
         department = Department.objects.filter(id=department_id).first()
         if not department:
             return Response(
                 {"error": "Department not found"},
                 status=status.HTTP_404_NOT_FOUND
             )
-        serializer = DepartmentSerializer(department)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+
+        # Serialize the department details
+        department_serializer = DepartmentSerializer(department)
+
+        # Retrieve the attendance history for the department by filtering through assignment groups
+        attendance_history = Attendance.objects.filter(
+            employee_assignment__assignment_group__department=department
+        ).order_by('-date')
+        attendance_serializer = AttendanceSerializer(attendance_history, many=True)
+
+        # Combine the department details and attendance history in the response
+        return Response({
+            "department": department_serializer.data,
+            "attendance_history": attendance_serializer.data
+        }, status=status.HTTP_200_OK)
+
     except Exception as e:
         return Response(
             {"error": str(e)},
@@ -1022,6 +1039,60 @@ def endAssignment(request, assignment_id):
                 response_data["reason"] = request.data['reason']
 
             return Response(response_data, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def getAssignmentEndInfo(request, assignment_id):
+    """
+    Function-based view to retrieve information about whether an assignment can be ended,
+    including active employee details and current status.
+    Only superusers or users with the 'Admin' role can access this information.
+    """
+    try:
+        if not (request.user.is_superuser or request.user.role == 'Admin'):
+            return Response(
+                {"error": "You do not have permission to view this information."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        assignment = AssignmentGroup.objects.filter(id=assignment_id).first()
+        if assignment is None:
+            return Response(
+                {"error": "Assignment not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        active_assignments = EmployeeAssignment.objects.filter(
+            assignment_group=assignment,
+            status='active'
+        ).select_related('employee')
+
+        response_data = {
+            "can_end": assignment.is_active,
+            "is_active": assignment.is_active,
+            "active_employees": active_assignments.count(),
+            "active_employee_list": [
+                {
+                    "id": assign.employee.id,
+                    "name": assign.employee.name,
+                    "assignment_date": assign.assigned_date.strftime("%Y-%m-%d")
+                }
+                for assign in active_assignments
+            ],
+            "start_date": assignment.created_date.strftime("%Y-%m-%d"),
+            "current_status": "Active" if assignment.is_active else "Ended",
+            "notes": assignment.notes
+        }
+
+        if not assignment.is_active:
+            response_data["end_date"] = assignment.end_date.strftime("%Y-%m-%d") if assignment.end_date else None
+
+        return Response(response_data, status=status.HTTP_200_OK)
     except Exception as e:
         return Response(
             {"error": str(e)},
