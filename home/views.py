@@ -636,6 +636,36 @@ def updateField(request, field_id):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def deleteField(request, field_id):
+    """
+    Function-based view to delete a specific field.
+    Only superusers can delete a field.
+    """
+    try:
+        field = Field.objects.filter(id=field_id).first()
+        if not field:
+            return Response(
+                {"error": "Field not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        if not request.user.is_superuser:
+            return Response(
+                {"error": "You do not have permission to delete this field."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        field.delete()
+        return Response(
+            {"message": "Field deleted successfully"},
+            status=status.HTTP_204_NO_CONTENT
+        )
+    except Exception as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
 class AssignmentListCreateView(APIView):
     """
     API view to list all assignments or create a new assignment group.
