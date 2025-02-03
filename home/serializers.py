@@ -43,6 +43,17 @@ class EmployeeSerializer(serializers.ModelSerializer):
             'id', 'name', 'email', 'phone_number', 'address', 'tag_id', 'nid', 'rssb_number'
         )
 
+class EmployeeDetailSerializer(EmployeeSerializer):
+    attendance_history = serializers.SerializerMethodField()
+    
+    class Meta(EmployeeSerializer.Meta):
+        fields = EmployeeSerializer.Meta.fields + ['attendance_history']
+    
+    def get_attendance_history(self, obj):
+        # Retrieve attendances from all assignments for this employee
+        attendances = Attendance.objects.filter(employee_assignment__employee=obj).order_by('-date')
+        return AttendanceDetailSerializer(attendances, many=True).data
+
 class FieldSerializer(serializers.ModelSerializer):
     class Meta:
         model = Field
