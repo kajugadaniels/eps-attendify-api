@@ -275,6 +275,37 @@ def getDepartments(request):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def createDepartment(request):
+    """
+    Function-based view to create a new department.
+    Only superusers or users with the 'Admin' role can add a new department.
+    """
+    try:
+        if not request.user.is_superuser and request.user.role != 'Admin':
+            return Response(
+                {"error": "You do not have permission to add a new department."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        serializer = DepartmentSerializer(data=request.data)
+        if serializer.is_valid():
+            department = serializer.save()
+            return Response({
+                "message": "Department created successfully",
+                "department": DepartmentSerializer(department).data
+            }, status=status.HTTP_201_CREATED)
+        else:
+            return Response({
+                "message": "Department creation failed",
+                "errors": serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
 class EmployeeListCreateView(APIView):
     """
     API view to list all employees with their roles or create a new empployee.
