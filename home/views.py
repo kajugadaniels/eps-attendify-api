@@ -390,98 +390,28 @@ def deleteDepartment(request, department_id):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
-class EmployeeListCreateView(APIView):
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def getEmployees(request):
     """
-    API view to list all employees with their roles or create a new empployee.
-    Only superuser and employees with the 'Admin' role can view or add employees.
+    Function-based view to list all employees.
+    Only superusers or users with the 'Admin' role can view employees.
     """
-    permission_classes = [IsAuthenticated]  # Allow access to authenticated employees
-
-    def get(self, request):
-        try:
-            # Check if the employee is a superuser or has the role of 'Admin'
-            if request.user.is_superuser or request.user.role == 'Admin':
-                employees = Employee.objects.all().order_by('-id')
-            else:
-                # If the employee is not authorized, return a forbidden response
-                return Response({"error": "You do not have permission to view this resource."},
-                                status=status.HTTP_403_FORBIDDEN)
-
-            # Serialize employee data with roles
-            serializer = EmployeeSerializer(employees, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    def post(self, request):
-        try:
-            # Only superuser and employees with the 'Admin' role can create new employees
-            if not request.user.is_superuser and request.user.role != 'Admin':
-                return Response({"error": "You do not have permission to add a new employee."},
-                                status=status.HTTP_403_FORBIDDEN)
-
-            # Use the EmployeeSerializer to validate and create a new employee
-            serializer = EmployeeSerializer(data=request.data)
-            if serializer.is_valid():
-                employee = serializer.save()
-                return Response({
-                    "message": "Employee created successfully",
-                    "employee": EmployeeSerializer(employee).data
-                }, status=status.HTTP_201_CREATED)
-            else:
-                return Response({
-                    "message": "Employee creation failed",
-                    "errors": serializer.errors
-                }, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-class EmployeeRetrieveUpdateDestroyView(APIView):
-    """
-    API view to retrieve, update, or delete a employee's details by their ID.
-    """
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_object(self, employee_id):
-        try:
-            return Employee.objects.get(id=employee_id)
-        except Employee.DoesNotExist:
-            return None
-
-    def get(self, request, employee_id):
-        employee = self.get_object(employee_id)
-        if employee is None:
-            return Response({"error": "Employee not found"}, status=status.HTTP_404_NOT_FOUND)
-        serializer = EmployeeSerializer(employee)
+    try:
+        if request.user.is_superuser or request.user.role == 'Admin':
+            employees = Employee.objects.all().order_by('-id')
+        else:
+            return Response(
+                {"error": "You do not have permission to view this resource."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        serializer = EmployeeSerializer(employees, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
-
-    def put(self, request, employee_id):
-        employee = self.get_object(employee_id)
-        if employee is None:
-            return Response({"error": "Employee not found"}, status=status.HTTP_404_NOT_FOUND)
-
-        # Permission check: Only superusers or the user themselves can update
-        if not request.user.is_superuser:
-            return Response({"error": "You do not have permission to update this employee."}, status=status.HTTP_403_FORBIDDEN)
-
-        serializer = EmployeeSerializer(employee, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response({"message": "Employee updated successfully", "user": serializer.data}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self, request, employee_id):
-        employee = self.get_object(employee_id)
-        if employee is None:
-            return Response({"error": "Employee not found"}, status=status.HTTP_404_NOT_FOUND)
-
-        # Permission check: Only superusers or users with specific permission can delete
-        if not request.user.is_superuser:
-            return Response({"error": "You do not have permission to delete this user."}, status=status.HTTP_403_FORBIDDEN)
-
-        # Deleting the employee
-        employee.delete()
-        return Response({"message": "Employee deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+    except Exception as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 class FieldListCreateView(APIView):
     """
