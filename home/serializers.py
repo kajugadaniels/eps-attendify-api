@@ -52,10 +52,11 @@ class FieldSerializer(serializers.ModelSerializer):
 
 class EmployeeAssignmentSerializer(serializers.ModelSerializer):
     employee_name = serializers.CharField(source='employee.name', read_only=True)
+    employee_tag_id = serializers.CharField(source='employee.tag_id', read_only=True)
 
     class Meta:
         model = EmployeeAssignment
-        fields = ['id', 'employee', 'employee_name', 'assignment_group', 
+        fields = ['id', 'employee', 'employee_name', 'employee_tag_id', 'assignment_group', 
                  'assigned_date', 'end_date', 'status']
         read_only_fields = ['assigned_date']
 
