@@ -887,6 +887,39 @@ def updateAssignment(request, assignment_id):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def deleteAssignment(request, assignment_id):
+    """
+    Function-based view to delete an assignment group and all its employee assignments.
+    Only superusers or users with the 'Admin' role can delete assignments.
+    """
+    try:
+        if not (request.user.is_superuser or request.user.role == 'Admin'):
+            return Response(
+                {"error": "You do not have permission to delete this assignment."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        assignment = AssignmentGroup.objects.filter(id=assignment_id).first()
+        if assignment is None:
+            return Response(
+                {"error": "Assignment not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        assignment_details = AssignmentGroupDetailSerializer(assignment).data
+        assignment.delete()
+        return Response({
+            "message": "Assignment deleted successfully",
+            "deleted_assignment": assignment_details
+        }, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
 class AttendanceListCreateView(generics.ListCreateAPIView):
     queryset = Attendance.objects.all().order_by('-id')
     serializer_class = AttendanceSerializer
