@@ -52,11 +52,10 @@ class FieldSerializer(serializers.ModelSerializer):
 
 class EmployeeAssignmentSerializer(serializers.ModelSerializer):
     employee_name = serializers.CharField(source='employee.name', read_only=True)
-    employee_tag_id = serializers.CharField(source='employee.tag_id', read_only=True)
 
     class Meta:
         model = EmployeeAssignment
-        fields = ['id', 'employee', 'employee_name', 'employee_tag_id', 'assignment_group', 
+        fields = ['id', 'employee', 'employee_name', 'assignment_group', 
                  'assigned_date', 'end_date', 'status']
         read_only_fields = ['assigned_date']
 
@@ -141,54 +140,6 @@ class AttendanceSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['day_salary']
 
-class AttendanceDetailSerializer(serializers.ModelSerializer):
-    employee_id = serializers.IntegerField(source='employee_assignment.employee.id', read_only=True)
-    employee_name = serializers.CharField(source='employee_assignment.employee.name', read_only=True)
-    assignment_group = serializers.CharField(source='employee_assignment.assignment_group.name', read_only=True)
-    department_name = serializers.CharField(source='employee_assignment.assignment_group.department.name', read_only=True)
-    field_name = serializers.CharField(source='employee_assignment.assignment_group.field.name', read_only=True)
-    
-    class Meta:
-        model = Attendance
-        fields = [
-            'id', 'date', 'attended', 'day_salary', 'is_supervisor',
-            'created_at', 'updated_at', 'employee_id', 'employee_name',
-            'assignment_group', 'department_name', 'field_name'
-        ]
-
-class EmployeeDetailSerializer(EmployeeSerializer):
-    attendance_history = serializers.SerializerMethodField()
-    
-    class Meta(EmployeeSerializer.Meta):
-        fields = EmployeeSerializer.Meta.fields + ['attendance_history']
-    
-    def get_attendance_history(self, obj):
-        # Retrieve attendances from all assignments for this employee
-        attendances = Attendance.objects.filter(employee_assignment__employee=obj).order_by('-date')
-        return AttendanceDetailSerializer(attendances, many=True).data
-
-class FieldDetailSerializer(FieldSerializer):
-    attendance_history = serializers.SerializerMethodField()
-    
-    class Meta(FieldSerializer.Meta):
-        fields = FieldSerializer.Meta.fields + ['attendance_history']
-    
-    def get_attendance_history(self, obj):
-        # Retrieve attendances from all assignment groups linked to this field
-        attendances = Attendance.objects.filter(employee_assignment__assignment_group__field=obj).order_by('-date')
-        return AttendanceDetailSerializer(attendances, many=True).data
-
-class DepartmentDetailSerializer(DepartmentSerializer):
-    attendance_history = serializers.SerializerMethodField()
-    
-    class Meta(DepartmentSerializer.Meta):
-        fields = DepartmentSerializer.Meta.fields + ['attendance_history']
-    
-    def get_attendance_history(self, obj):
-        # Retrieve attendances from all assignment groups linked to this department
-        attendances = Attendance.objects.filter(employee_assignment__assignment_group__department=obj).order_by('-date')
-        return AttendanceDetailSerializer(attendances, many=True).data
-
 class AttendanceMarkSerializer(serializers.Serializer):
     tag_ids = serializers.ListField(
         child=serializers.CharField(),
@@ -212,6 +163,7 @@ class AttendanceMarkSerializer(serializers.Serializer):
                     EmployeeAssignment.objects.get(employee__tag_id=tag_id, status='active')
                 except EmployeeAssignment.DoesNotExist:
                     raise serializers.ValidationError(f"No active assignment found for tag ID {tag_id}")
+
         return value
 
     def create(self, validated_data):
@@ -220,8 +172,8 @@ class AttendanceMarkSerializer(serializers.Serializer):
         attendance_records = []
 
         for tag_id in tag_ids:
+            # Determine if the tag ID is a supervisor or employee and get the respective assignment
             try:
-                # Determine if the tag ID is for a supervisor first
                 assignment_group = AssignmentGroup.objects.get(supervisor__tag_id=tag_id, is_active=True)
                 employee_assignment = EmployeeAssignment.objects.filter(assignment_group=assignment_group).first()
                 is_supervisor = True
@@ -238,12 +190,13 @@ class AttendanceMarkSerializer(serializers.Serializer):
             if existing_attendance:
                 if existing_attendance.attended:
                     raise serializers.ValidationError({
-                        "attendance": f"Attendance has already been marked for tag ID {tag_id} on {date}."
+                        "attendance": f"Attendance has already been marked for tag ID {tag_id} on this date."
                     })
                 existing_attendance.attended = True
                 existing_attendance.save()
                 attendance_records.append(existing_attendance)
             else:
+                # Create a new attendance record
                 attendance = Attendance.objects.create(
                     employee_assignment=employee_assignment,
                     date=date,
@@ -251,4 +204,5 @@ class AttendanceMarkSerializer(serializers.Serializer):
                     is_supervisor=is_supervisor
                 )
                 attendance_records.append(attendance)
+
         return attendance_records
