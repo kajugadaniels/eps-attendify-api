@@ -498,6 +498,36 @@ def updateEmployee(request, employee_id):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def deleteEmployee(request, employee_id):
+    """
+    Function-based view to delete a specific employee.
+    Only superusers can delete an employee.
+    """
+    try:
+        employee = Employee.objects.filter(id=employee_id).first()
+        if not employee:
+            return Response(
+                {"error": "Employee not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        if not request.user.is_superuser:
+            return Response(
+                {"error": "You do not have permission to delete this employee."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        employee.delete()
+        return Response(
+            {"message": "Employee deleted successfully"},
+            status=status.HTTP_204_NO_CONTENT
+        )
+    except Exception as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
 class FieldListCreateView(APIView):
     """
     API view to list all fields with their roles or create a new field.
