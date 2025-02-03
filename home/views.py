@@ -183,6 +183,42 @@ def getUserDetail(request, user_id):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def updateUser(request, user_id):
+    """
+    Function-based view to update a user's details.
+    Only superusers or the user themselves can update their details.
+    """
+    try:
+        user = User.objects.filter(id=user_id).first()
+        if not user:
+            return Response(
+                {"error": "User not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Check permission: only superuser or the user themselves may update
+        if not request.user.is_superuser and request.user.id != user.id:
+            return Response(
+                {"error": "You do not have permission to edit this user."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        serializer = UserSerializer(user, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {"message": "User updated successfully", "user": serializer.data},
+                status=status.HTTP_200_OK
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
 class DepartmentListCreateView(APIView):
     """
     API view to list all departments with their roles or create a new department.
