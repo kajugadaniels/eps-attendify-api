@@ -993,3 +993,22 @@ def updateAttendance(request, attendance_id):
     except Exception as e:
         return Response({"error": str(e)},
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def deleteAttendance(request, attendance_id):
+    """
+    Function-based view to delete a specific attendance record.
+    """
+    try:
+        attendance = Attendance.objects.filter(id=attendance_id).first()
+        if not attendance:
+            return Response({"error": "Attendance not found"},
+                            status=status.HTTP_404_NOT_FOUND)
+        attendance.delete()
+        return Response({"message": "Attendance deleted successfully"},
+                        status=status.HTTP_204_NO_CONTENT)
+    except Exception as e:
+        return Response({"error": str(e)},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
