@@ -1243,19 +1243,23 @@ def deleteAttendance(request, attendance_id):
 def markAttendance(request):
     """
     Function-based view to mark attendance for a list of tag IDs.
-    Processes each tag ID to determine if it belongs to a supervisor or an employee,
-    marks the attendance accordingly, and returns detailed information for each record.
+    Processes each tag ID individually so that an error with one does not affect others.
+    Detailed error messages are provided for each failed tag, and successful records are returned.
+    Enforces that attendance for a specific employee in a given assignment can only be marked after 8 hours.
     """
     serializer = AttendanceMarkSerializer(data=request.data)
     if serializer.is_valid():
         try:
-            # Save and retrieve a list of attendance records
-            attendance_records = serializer.save()
+            result = serializer.save()
+            attendance_records = result.get("attendance_records", [])
+            errors = result.get("errors", {})
             detailed_data = AttendanceSerializer(attendance_records, many=True).data
-            return Response({
-                "message": "Attendance marked successfully",
-                "attendances": detailed_data
-            }, status=status.HTTP_200_OK)
+            response_data = {
+                "message": "Attendance processed successfully.",
+                "attendances": detailed_data,
+                "errors": errors
+            }
+            return Response(response_data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)},
                             status=status.HTTP_400_BAD_REQUEST)
