@@ -920,31 +920,17 @@ def deleteAssignment(request, assignment_id):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
-class AttendanceListCreateView(generics.ListCreateAPIView):
-    queryset = Attendance.objects.all().order_by('-id')
-    serializer_class = AttendanceSerializer
-
-class AttendanceRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Attendance.objects.all()
-    serializer_class = AttendanceSerializer
-    lookup_url_kwarg = 'attendance_id'
-
-class MarkAttendanceView(APIView):
-    permission_classes = [AllowAny]  # Allow any user to access this view
-    authentication_classes = []      # No authentication required
-    
-    def post(self, request):
-        serializer = AttendanceMarkSerializer(data=request.data)
-        if serializer.is_valid():
-            try:
-                attendance = serializer.save()
-                return Response(
-                    AttendanceSerializer(attendance).data,
-                    status=status.HTTP_200_OK
-                )
-            except Exception as e:
-                return Response(
-                    {"error": str(e)},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def getAttendances(request):
+    """
+    Function-based view to list all attendances.
+    Returns detailed information including related employee and department data.
+    """
+    try:
+        attendances = Attendance.objects.all().order_by('-id')
+        serializer = AttendanceSerializer(attendances, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"error": str(e)},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
