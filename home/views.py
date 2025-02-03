@@ -219,6 +219,39 @@ def updateUser(request, user_id):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def deleteUser(request, user_id):
+    """
+    Function-based view to delete a user.
+    Only superusers are allowed to delete a user.
+    """
+    try:
+        user = User.objects.filter(id=user_id).first()
+        if not user:
+            return Response(
+                {"error": "User not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Only superusers can delete users
+        if not request.user.is_superuser:
+            return Response(
+                {"error": "You do not have permission to delete this user."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        user.delete()
+        return Response(
+            {"message": "User deleted successfully"},
+            status=status.HTTP_204_NO_CONTENT
+        )
+    except Exception as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
 class DepartmentListCreateView(APIView):
     """
     API view to list all departments with their roles or create a new department.
