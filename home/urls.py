@@ -34,9 +34,13 @@ urlpatterns = [
     path('field/<int:field_id>/update/', updateField, name='updateField'),
     path('field/<int:field_id>/delete/', deleteField, name='deleteField'),
 
-    path('assignments/', AssignmentListCreateView.as_view(), name='getAssignmentListCreate'),
-    path('assignment/<int:assignment_id>/', AssignmentRetrieveUpdateDestroyView.as_view(), name='assignmentRetrieveUpdateDestroy'),
-    path('assignment/<int:assignment_id>/end/', EndAssignmentView.as_view(), name='EndAssignment'),
+    path('assignments/', getAssignments, name='getAssignments'),
+    path('assignment/create/', createAssignment, name='createAssignment'),
+    path('assignment/<int:assignment_id>/', getAssignmentDetail, name='getAssignmentDetail'),
+    path('assignment/<int:assignment_id>/update/', updateAssignment, name='updateAssignment'),
+    path('assignment/<int:assignment_id>/delete/', deleteAssignment, name='deleteAssignment'),
+    path('assignment/<int:assignment_id>/end/', endAssignment, name='endAssignment'),
+    path('assignment/<int:assignment_id>/end-info/', getAssignmentEndInfo, name='getAssignmentEndInfo'),
 
     path('attendances/', AttendanceListCreateView.as_view(), name='getAttendanceListCreate'),
     path('attendance/<int:attendance_id>/', AttendanceRetrieveUpdateDestroyView.as_view(), name='attendanceRetrieveUpdateDestroy'),
