@@ -57,7 +57,7 @@ class EmployeeAssignmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = EmployeeAssignment
         fields = ['id', 'employee', 'employee_name', 'employee_tag_id', 'assignment_group',
-                 'assigned_date', 'end_date', 'status', 'created_at']
+                 'assigned_date', 'end_date', 'status']
         read_only_fields = ['assigned_date']
 
     def validate(self, data):
@@ -76,7 +76,7 @@ class AssignmentGroupSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'field', 'field_name', 'department', 
                  'department_name', 'supervisor', 'supervisor_name',
                  'created_date', 'end_date', 'notes', 'is_active', 
-                 'employee_assignments', 'created_at']
+                 'employee_assignments', 'created_date']
         read_only_fields = ['created_date']
 
     def validate(self, data):
