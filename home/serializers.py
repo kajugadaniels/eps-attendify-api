@@ -13,7 +13,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
-            'id', 'name', 'email', 'phone_number', 'role', 'password', 'user_permissions'
+            'id', 'name', 'email', 'phone_number', 'role', 'created_at', 'password', 'user_permissions'
         )
 
     def get_user_permissions(self, obj):
@@ -33,14 +33,14 @@ class DepartmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Department
         fields = (
-            'id', 'name', 'day_salary'
+            'id', 'name', 'day_salary', 'created_at'
         )
 
 class EmployeeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Employee
         fields = (
-            'id', 'name', 'email', 'phone_number', 'address', 'tag_id', 'nid', 'rssb_number'
+            'id', 'name', 'email', 'phone_number', 'address', 'tag_id', 'nid', 'rssb_number', 'created_at'
         )
 
 class FieldSerializer(serializers.ModelSerializer):
@@ -57,7 +57,7 @@ class EmployeeAssignmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = EmployeeAssignment
         fields = ['id', 'employee', 'employee_name', 'employee_tag_id', 'assignment_group',
-                 'assigned_date', 'end_date', 'status']
+                 'assigned_date', 'end_date', 'status', 'created_at']
         read_only_fields = ['assigned_date']
 
     def validate(self, data):
@@ -76,7 +76,7 @@ class AssignmentGroupSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'field', 'field_name', 'department', 
                  'department_name', 'supervisor', 'supervisor_name',
                  'created_date', 'end_date', 'notes', 'is_active', 
-                 'employee_assignments']
+                 'employee_assignments', 'created_at']
         read_only_fields = ['created_date']
 
     def validate(self, data):
@@ -138,8 +138,7 @@ class AttendanceSerializer(serializers.ModelSerializer):
             'attended',
             'day_salary',
             'is_supervisor',
-            'created_at',
-            'updated_at'
+            'created_at'
         ]
         read_only_fields = ['day_salary']
 
