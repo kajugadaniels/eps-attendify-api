@@ -33,7 +33,7 @@ class DepartmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Department
         fields = (
-            'id', 'name', 'day_salary', 'created_at'
+            'id', 'name', 'day_salary'
         )
 
 class EmployeeSerializer(serializers.ModelSerializer):
